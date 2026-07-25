@@ -111,10 +111,12 @@ export const getOrCreateCurrent = mutation({
   args: {
     name: v.optional(v.string()),
     phone: v.optional(v.string()),
+    email: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx);
-    const email = identity.email?.trim().toLowerCase();
+    const rawEmail = identity.email || args.email;
+    const email = rawEmail?.trim().toLowerCase();
     if (!email) throw new Error("A verified email address is required.");
 
     let user = await ctx.db

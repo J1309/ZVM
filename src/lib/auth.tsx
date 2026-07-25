@@ -172,6 +172,7 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
         const appUser = await getOrCreateCurrent(
           clerkUser.fullName || clerkUser.firstName || undefined,
           clerkUser.primaryPhoneNumber?.phoneNumber,
+          clerkUser.primaryEmailAddress?.emailAddress,
         );
 
         if (!cancelled) {

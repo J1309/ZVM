@@ -19,9 +19,9 @@ export async function getUserById(id: string): Promise<User | null> {
   return (getItem<User[]>(KEY) ?? []).find(user => user.id === id) ?? null;
 }
 
-export async function getOrCreateCurrent(name?: string, phone?: string): Promise<User> {
+export async function getOrCreateCurrent(name?: string, phone?: string, email?: string): Promise<User> {
   if (!convex) throw new Error('Production authentication is not configured.');
-  return convex.mutation(api.users.getOrCreateCurrent, { name, phone });
+  return convex.mutation(api.users.getOrCreateCurrent, { name, phone, email });
 }
 
 export async function createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
