@@ -9,6 +9,14 @@ export interface DailySession {
   bufferMinutes: number;  // 30 mins travel + dog prep
 }
 
+export interface SlotOverride {
+  date: string; // "YYYY-MM-DD"
+  sessionId: number;
+  blocked: boolean;
+  reason?: string;
+  updatedAt: string;
+}
+
 /**
  * ZoomieVan Official Operational Sessions (7 total daily sessions from 9:00 AM to 4:00 PM Canada Mountain Time).
  * Each 1-hour session consists of 30 mins workout + 30 mins travel & dog prep.
@@ -86,6 +94,58 @@ export const DAILY_SESSIONS: DailySession[] = [
   },
 ];
 
+const OVERRIDES_KEY = 'zoomievan_slot_overrides';
+const inMemoryOverrides: Record<string, SlotOverride> = {};
+
 export function getOperatingSessions(): DailySession[] {
   return DAILY_SESSIONS;
+}
+
+export function getSlotOverrides(): Record<string, SlotOverride> {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(OVERRIDES_KEY);
+      if (raw) {
+        return { ...inMemoryOverrides, ...JSON.parse(raw) };
+      }
+    }
+  } catch {}
+  return { ...inMemoryOverrides };
+}
+
+export function blockSessionSlot(date: string, sessionId: number, reason = 'Emergency Driver / Van Unavailable'): SlotOverride {
+  const key = `${date}_${sessionId}`;
+  const override: SlotOverride = {
+    date,
+    sessionId,
+    blocked: true,
+    reason,
+    updatedAt: new Date().toISOString(),
+  };
+  inMemoryOverrides[key] = override;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(OVERRIDES_KEY, JSON.stringify(inMemoryOverrides));
+    }
+  } catch {}
+  return override;
+}
+
+export function unblockSessionSlot(date: string, sessionId: number): void {
+  const key = `${date}_${sessionId}`;
+  delete inMemoryOverrides[key];
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(OVERRIDES_KEY, JSON.stringify(inMemoryOverrides));
+    }
+  } catch {}
+}
+
+export function isSlotBlocked(date: string, sessionId: number): { blocked: boolean; reason?: string } {
+  const key = `${date}_${sessionId}`;
+  const override = getSlotOverrides()[key];
+  if (override?.blocked) {
+    return { blocked: true, reason: override.reason };
+  }
+  return { blocked: false };
 }

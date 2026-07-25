@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Settings, MapPinned, ShieldCheck,
-  Truck, Receipt, ArrowLeft, Menu, X, LogOut
+  Truck, Receipt, ArrowLeft, Menu, X, LogOut, Calendar
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import AdminDashboard from './admin/Dashboard';
@@ -12,9 +12,11 @@ import AdminFSAPanel from './admin/FSAPanel';
 import AdminVaccinePanel from './admin/VaccinePanel';
 import AdminFleetPanel from './admin/FleetPanel';
 import AdminReports from './admin/Reports';
+import AdminSchedulePanel from './admin/SchedulePanel';
 
 const tabs = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'schedule', label: 'Pickup Windows', icon: Calendar },
   { id: 'cms', label: 'CMS', icon: Settings },
   { id: 'fsa', label: 'FSA Manager', icon: MapPinned },
   { id: 'vaccines', label: 'Vaccines', icon: ShieldCheck },
@@ -36,6 +38,7 @@ export default function AdminPage() {
   const renderPanel = () => {
     switch (activeTab) {
       case 'dashboard': return <AdminDashboard />;
+      case 'schedule': return <AdminSchedulePanel />;
       case 'cms': return <AdminCMSPanel />;
       case 'fsa': return <AdminFSAPanel />;
       case 'vaccines': return <AdminVaccinePanel />;

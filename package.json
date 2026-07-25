@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit && tsc -p convex/tsconfig.json",
-    "test": "node --test tests/security.test.mjs tests/preloader.test.mjs tests/rotation.test.mjs tests/geo.test.mjs tests/operatingHours.test.mjs",
+    "test": "node --test tests/security.test.mjs tests/preloader.test.mjs tests/rotation.test.mjs tests/geo.test.mjs tests/operatingHours.test.mjs tests/emergencySchedule.test.mjs",
     "check": "npm run typecheck && npm test && npm run build",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",

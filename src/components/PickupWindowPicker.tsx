@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Clock, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
-import { DAILY_SESSIONS, DailySession } from '../lib/operatingHours';
+import { DAILY_SESSIONS, DailySession, isSlotBlocked } from '../lib/operatingHours';
 import { getRotationDetails, ServiceZone } from '../lib/rotation';
 import { Skeleton } from './Skeleton';
 
@@ -47,12 +47,16 @@ export default function PickupWindowPicker({
   }, [selectedDayIndex]);
 
   const slots = DAILY_SESSIONS.map((session, index) => {
-    // Demo availability: mock some slots as booked
-    const isBooked = index === 1 || index === 5;
+    const override = isSlotBlocked(selectedDateObj.fullDate, session.id);
+    const isEmergencyBlocked = override.blocked;
+    const isBooked = index === 5;
     const vanName = ['Thunder', 'Storm', 'Bolt'][index % 3];
+
     return {
       session,
-      available: !isBooked && isRegionActive,
+      available: !isBooked && !isEmergencyBlocked && isRegionActive,
+      isEmergencyBlocked,
+      blockedReason: override.reason,
       van: vanName,
     };
   });
@@ -168,14 +172,16 @@ export default function PickupWindowPicker({
                 className={`w-full rounded-2xl border p-3 text-left transition ${
                   isSelected
                     ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
-                    : item.available
-                      ? 'border-[#D6E6FF] bg-white text-[#071A3D] hover:border-brand-300'
-                      : 'cursor-not-allowed border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8]'
+                    : item.isEmergencyBlocked
+                      ? 'cursor-not-allowed border-red-200 bg-red-50 text-red-800'
+                      : item.available
+                        ? 'border-[#D6E6FF] bg-white text-[#071A3D] hover:border-brand-300'
+                        : 'cursor-not-allowed border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Clock className={`h-4 w-4 ${isSelected ? 'text-brand-600' : 'text-brand-500'}`} />
+                    <Clock className={`h-4 w-4 ${isSelected ? 'text-brand-600' : item.isEmergencyBlocked ? 'text-red-500' : 'text-brand-500'}`} />
                     <div>
                       <span className="text-sm font-bold">{item.session.displayTime}</span>
                       <span className="ml-2 text-xs font-medium text-[#64748B]">({item.session.label})</span>
@@ -187,12 +193,18 @@ export default function PickupWindowPicker({
                       className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${
                         isSelected
                           ? 'bg-brand-500 text-white'
-                          : item.available
-                            ? 'bg-[#EAF2FF] text-[#0F3D91]'
-                            : 'bg-[#E2E8F0] text-[#64748B]'
+                          : item.isEmergencyBlocked
+                            ? 'bg-red-100 text-red-800 border border-red-200'
+                            : item.available
+                              ? 'bg-[#EAF2FF] text-[#0F3D91]'
+                              : 'bg-[#E2E8F0] text-[#64748B]'
                       }`}
                     >
-                      {item.available ? (isSelected ? 'Selected' : 'Open') : 'Booked'}
+                      {item.isEmergencyBlocked
+                        ? `Emergency Blocked: ${item.blockedReason}`
+                        : item.available
+                          ? isSelected ? 'Selected' : 'Open'
+                          : 'Booked'}
                     </span>
                   </div>
                 </div>
