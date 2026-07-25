@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, PawPrint, ShieldCheck, MapPinned, LogOut, Calendar, ChevronRight, Plus, X, Save, Loader2, CreditCard } from 'lucide-react';
+import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
 import { createCheckoutSession, STRIPE_PLANS, StripePlanKey } from '../lib/payments';
+import PickupWindowPicker from '../components/PickupWindowPicker';
 
 const CURRENT_LEGAL_VERSION = '2026-07-14';
 const emptyDog: UserDog = { name: '', breed: '', weight: 0, age: 0, energyLevel: '', reactivityNotes: '' };
@@ -267,9 +268,18 @@ export default function UserDashboard() {
             </button>
           </div>
           {checkoutError && <p className="mt-3 text-sm text-red-300">{checkoutError}</p>}
-          <Link to="/#book-now" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-300 hover:text-brand-200">
-            <Calendar className="w-4 h-4" /> Review pricing preview <ChevronRight className="w-4 h-4" />
-          </Link>
+        </motion.div>
+
+        {/* Pickup Window & Session Scheduling */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-8"
+        >
+          <PickupWindowPicker
+            userFsa={user.address.postalCode?.slice(0, 3) || 'T5H'}
+          />
         </motion.div>
       </div>
 

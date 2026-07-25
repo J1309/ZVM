@@ -7,9 +7,11 @@ import {
   TrendingUp, Users, Calendar
 } from 'lucide-react';
 import { Skeleton } from './Skeleton';
+import PickupWindowPicker from './PickupWindowPicker';
 
 const adminTabs = [
   { id: 'cms', icon: <Settings className="w-4 h-4" />, label: 'CMS' },
+  { id: 'schedule', icon: <Calendar className="w-4 h-4" />, label: 'Pickup Windows' },
   { id: 'fsa', icon: <MapPinned className="w-4 h-4" />, label: 'FSA Manager' },
   { id: 'vaccines', icon: <ShieldCheck className="w-4 h-4" />, label: 'Vaccines' },
   { id: 'fleet', icon: <Truck className="w-4 h-4" />, label: 'Fleet' },
@@ -220,6 +222,7 @@ export default function AdminPreview() {
     }
     switch (activeTab) {
       case 'cms': return <CMSPanel />;
+      case 'schedule': return <PickupWindowPicker readOnly />;
       case 'fsa': return <FSAPanel />;
       case 'vaccines': return <VaccinePanel />;
       case 'fleet': return <FleetPanel />;
