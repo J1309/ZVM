@@ -57,6 +57,7 @@ export default defineSchema({
     tier: v.union(v.literal("Tier 1"), v.literal("Tier 2")),
     surcharge: v.number(),
     status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+    region: v.optional(v.union(v.literal("East"), v.literal("North"), v.literal("West"), v.literal("South"))),
     ...timestampFields,
   })
     .index("by_fsa", ["fsa"])

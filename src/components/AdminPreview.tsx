@@ -40,11 +40,11 @@ function CMSPanel() {
 
 function FSAPanel() {
   const zones = [
-    { fsa: 'M5V', city: 'Toronto', tier: 'Tier 1', surcharge: '$0', status: 'active' },
-    { fsa: 'V6B', city: 'Vancouver', tier: 'Tier 1', surcharge: '$0', status: 'active' },
-    { fsa: 'T2P', city: 'Calgary', tier: 'Tier 2', surcharge: '$5', status: 'active' },
-    { fsa: 'K1A', city: 'Ottawa', tier: 'Tier 2', surcharge: '$5', status: 'active' },
-    { fsa: 'H2X', city: 'Montreal', tier: 'Tier 1', surcharge: '$0', status: 'pending' },
+    { fsa: 'M5V', city: 'Toronto', tier: 'Tier 1', surcharge: '$0', region: 'East', status: 'active' },
+    { fsa: 'V6B', city: 'Vancouver', tier: 'Tier 1', surcharge: '$0', region: 'West', status: 'active' },
+    { fsa: 'T2P', city: 'Calgary', tier: 'Tier 2', surcharge: '$5', region: 'North', status: 'active' },
+    { fsa: 'K1A', city: 'Ottawa', tier: 'Tier 2', surcharge: '$5', region: 'South', status: 'active' },
+    { fsa: 'H2X', city: 'Montreal', tier: 'Tier 1', surcharge: '$0', region: 'East', status: 'pending' },
   ];
 
   return (
@@ -54,6 +54,7 @@ function FSAPanel() {
           <tr className="bg-dark-700">
             <th className="text-left p-3 text-xs text-dark-400 font-medium">FSA</th>
             <th className="text-left p-3 text-xs text-dark-400 font-medium">City</th>
+            <th className="text-left p-3 text-xs text-dark-400 font-medium">Region (8d)</th>
             <th className="text-left p-3 text-xs text-dark-400 font-medium">Tier</th>
             <th className="text-left p-3 text-xs text-dark-400 font-medium">Surcharge</th>
             <th className="text-left p-3 text-xs text-dark-400 font-medium">Status</th>
@@ -64,6 +65,11 @@ function FSAPanel() {
             <tr key={zone.fsa} className="hover:bg-dark-700/50">
               <td className="p-3 font-mono text-brand-400 font-semibold">{zone.fsa}</td>
               <td className="p-3 text-dark-200">{zone.city}</td>
+              <td className="p-3">
+                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                  {zone.region}
+                </span>
+              </td>
               <td className="p-3 text-dark-300">{zone.tier}</td>
               <td className="p-3 text-dark-300">{zone.surcharge}</td>
               <td className="p-3">

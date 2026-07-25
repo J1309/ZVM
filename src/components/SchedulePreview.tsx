@@ -1,11 +1,19 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, RefreshCw } from 'lucide-react';
 import { Skeleton } from './Skeleton';
+import { getRotationDetails } from '../lib/rotation';
 
-const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const dates = [12, 13, 14, 15, 16, 17, 18];
+const dates = [
+  { day: 'Mon', dateNum: 13, fullDate: '2026-07-13' },
+  { day: 'Tue', dateNum: 14, fullDate: '2026-07-14' },
+  { day: 'Wed', dateNum: 15, fullDate: '2026-07-15' },
+  { day: 'Thu', dateNum: 16, fullDate: '2026-07-16' },
+  { day: 'Fri', dateNum: 17, fullDate: '2026-07-17' },
+  { day: 'Sat', dateNum: 18, fullDate: '2026-07-18' },
+  { day: 'Sun', dateNum: 19, fullDate: '2026-07-19' },
+];
 
 const timeSlots = [
   { time: '8:00 AM', available: true, van: 'Thunder' },
@@ -22,9 +30,12 @@ const timeSlots = [
 
 export default function SchedulePreview() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
-  const [selectedDay, setSelectedDay] = useState(2); // Wednesday
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // Monday Jul 13
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const selectedDateObj = dates[selectedDayIndex];
+  const rotationInfo = getRotationDetails(selectedDateObj.fullDate);
 
   useEffect(() => {
     if (inView) {
@@ -38,7 +49,7 @@ export default function SchedulePreview() {
     setSelectedSlot(null);
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
-  }, [selectedDay]);
+  }, [selectedDayIndex]);
 
   return (
     <section className="relative py-24 lg:py-32 bg-dark-800/20 overflow-hidden">
@@ -54,21 +65,22 @@ export default function SchedulePreview() {
             className="lg:w-5/12 space-y-6"
           >
             <span className="text-brand-500 font-semibold text-sm uppercase tracking-[0.15em] block">
-              Smart Scheduling
+              Continuous 8-Day Rotation
             </span>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
-              Real-Time <span className="text-gradient">Calendar</span>
+              Dynamic Service <span className="text-gradient">Rotation Engine</span>
             </h2>
             <p className="text-dark-300 text-lg leading-relaxed">
-              Our scheduling engine displays only viable time slots by actively calculating 
-              whether local vans are operating within your neighbourhood zone on that specific day.
+              Vans operate on an 8-day cycle across 4 zonal sectors: 
+              <strong className="text-white"> East (2d) → North (2d) → West (2d) → South (2d)</strong>. 
+              The schedule automatically recalculates available slots per region for maximum routing efficiency.
             </p>
             <div className="space-y-3">
               {[
-                'Skeleton shimmers until data loads',
-                'Zone-aware slot availability',
-                'Instant cancel/reschedule up to 24hrs',
-                'Auto-scheduling for weekly subscribers',
+                '8-day rolling zonal availability',
+                'No 7-day fixed weekday overlap',
+                'Zone-aware slot filtering',
+                'Auto-scheduling for regular runs',
               ].map((item) => (
                 <div key={item} className="flex items-center gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-500" />
@@ -89,9 +101,10 @@ export default function SchedulePreview() {
               {/* Calendar header */}
               <div className="p-5 border-b border-dark-600 flex items-center justify-between">
                 <div>
-                  <h3 className="font-display text-lg font-semibold text-white">January 2025</h3>
-                  <p className="text-xs text-dark-400 flex items-center gap-1 mt-1">
-                    <MapPin className="w-3 h-3" /> Zone M5V — GTA Downtown
+                  <h3 className="font-display text-lg font-semibold text-white">July 2026</h3>
+                  <p className="text-xs text-brand-400 flex items-center gap-1.5 mt-1 font-medium">
+                    <RefreshCw className="w-3 h-3 animate-spin-slow" />
+                    Active Sector: <span className="font-bold text-white">{rotationInfo.activeZone} Region</span> (Day {rotationInfo.dayInZone} of 2 • Rotation #{rotationInfo.rotationNumber})
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -106,20 +119,30 @@ export default function SchedulePreview() {
 
               {/* Day selector */}
               <div className="grid grid-cols-7 gap-1 p-3 border-b border-dark-600">
-                {days.map((day, i) => (
-                  <button
-                    key={day}
-                    onClick={() => setSelectedDay(i)}
-                    className={`flex flex-col items-center py-2 rounded-xl transition-all ${
-                      selectedDay === i
-                        ? 'bg-brand-500 text-white'
-                        : 'text-dark-300 hover:bg-dark-700'
-                    }`}
-                  >
-                    <span className="text-xs font-medium">{day}</span>
-                    <span className="text-lg font-bold mt-0.5">{dates[i]}</span>
-                  </button>
-                ))}
+                {dates.map((item, i) => {
+                  const dayRotation = getRotationDetails(item.fullDate);
+                  return (
+                    <button
+                      key={item.fullDate}
+                      onClick={() => setSelectedDayIndex(i)}
+                      className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all ${
+                        selectedDayIndex === i
+                          ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/20'
+                          : 'text-dark-300 hover:bg-dark-700'
+                      }`}
+                    >
+                      <span className="text-xs font-medium">{item.day}</span>
+                      <span className="text-base font-bold mt-0.5">{item.dateNum}</span>
+                      <span className={`text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded ${
+                        selectedDayIndex === i
+                          ? 'bg-white/20 text-white'
+                          : 'bg-dark-700 text-dark-400'
+                      }`}>
+                        {dayRotation.activeZone}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Time slots */}
@@ -174,7 +197,7 @@ export default function SchedulePreview() {
                   className="p-4 border-t border-dark-600"
                 >
                   <button className="w-full py-3 bg-gradient-to-r from-brand-600 to-brand-500 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transition-all">
-                    Confirm {timeSlots[selectedSlot].time} — {days[selectedDay]}, Jan {dates[selectedDay]}
+                    Confirm {timeSlots[selectedSlot].time} — {selectedDateObj.day}, July {selectedDateObj.dateNum} ({rotationInfo.activeZone} Sector)
                   </button>
                 </motion.div>
               )}

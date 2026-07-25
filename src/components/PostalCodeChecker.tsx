@@ -2,7 +2,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sparkles } from 'lucide-react';
+import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sparkles, Calendar } from 'lucide-react';
+import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
+
+function getFsaRegion(fsa: string): ServiceZone {
+  const code = (fsa.charCodeAt(0) + fsa.charCodeAt(fsa.length - 1)) % 4;
+  return (['East', 'North', 'West', 'South'] as const)[code];
+}
 
 const ACTIVE_FSAS = [
   'M1B','M1C','M1E','M1G','M1H','M1J','M1K','M1L','M1M','M1N','M1P','M1R','M1S','M1T','M1V','M1W','M1X',
@@ -126,9 +132,26 @@ export default function PostalCodeChecker() {
                     <CheckCircle2 className="mt-0.5 h-6 w-6 text-[#0F3D91]" />
                     <div>
                       <p className="font-display text-xl font-bold text-[#14532d]">Good news, we are in your area.</p>
-                      <p className="mt-1 text-sm text-[#276749]">Zone <span className="font-bold">{fsa}</span> is currently serviced by our fleet.</p>
+                      <p className="mt-1 text-sm text-[#276749]">
+                        Zone <span className="font-bold">{fsa}</span> is in our <span className="font-bold text-[#0F3D91]">{getFsaRegion(fsa)} Region</span> (8-Day Rotation).
+                      </p>
                     </div>
                   </div>
+
+                  <div className="mt-4 rounded-xl border border-white/60 bg-white/70 p-3">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0F3D91]">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Upcoming Service Rotation Dates
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {getUpcomingActiveDatesForRegion(getFsaRegion(fsa), 4, new Date('2026-07-25')).map((d) => (
+                        <span key={d} className="rounded-lg bg-[#0F3D91]/10 px-2.5 py-1 text-xs font-semibold text-[#0F3D91]">
+                          {new Date(`${d}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short', timeZone: 'UTC' })}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => navigate('/signup')}
                     className="keep-white mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#16a34a] py-3 font-bold transition hover:bg-[#15803d]"

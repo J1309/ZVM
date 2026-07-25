@@ -5,11 +5,11 @@ import { api, convex } from '../convexClient';
 const KEY = 'fsa_zones';
 
 const DEFAULT_ZONES: FSARecord[] = [
-  { id: generateId(), fsa: 'M5V', city: 'Toronto', province: 'ON', tier: 'Tier 1', surcharge: 0, status: 'active', createdAt: new Date().toISOString() },
-  { id: generateId(), fsa: 'V6B', city: 'Vancouver', province: 'BC', tier: 'Tier 1', surcharge: 0, status: 'active', createdAt: new Date().toISOString() },
-  { id: generateId(), fsa: 'T2P', city: 'Calgary', province: 'AB', tier: 'Tier 2', surcharge: 5, status: 'active', createdAt: new Date().toISOString() },
-  { id: generateId(), fsa: 'K1A', city: 'Ottawa', province: 'ON', tier: 'Tier 2', surcharge: 5, status: 'active', createdAt: new Date().toISOString() },
-  { id: generateId(), fsa: 'H2X', city: 'Montreal', province: 'QC', tier: 'Tier 1', surcharge: 0, status: 'pending', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'M5V', city: 'Toronto', province: 'ON', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'East', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'V6B', city: 'Vancouver', province: 'BC', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'West', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'T2P', city: 'Calgary', province: 'AB', tier: 'Tier 2', surcharge: 5, status: 'active', region: 'North', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'K1A', city: 'Ottawa', province: 'ON', tier: 'Tier 2', surcharge: 5, status: 'active', region: 'South', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'H2X', city: 'Montreal', province: 'QC', tier: 'Tier 1', surcharge: 0, status: 'pending', region: 'East', createdAt: new Date().toISOString() },
 ];
 
 export async function getAllZones(): Promise<FSARecord[]> {

@@ -24,6 +24,7 @@ export interface FSARecord {
   tier: 'Tier 1' | 'Tier 2';
   surcharge: number;
   status: 'active' | 'pending' | 'inactive';
+  region?: 'East' | 'North' | 'West' | 'South';
   createdAt: string;
 }
 

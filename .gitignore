@@ -16,3 +16,9 @@ pnpm-debug.log*
 Thumbs.db
 .vscode
 .idea
+
+# Graphify analysis output & cache
+.graphify-py
+.uv-graphify-cache
+graphify-out
+

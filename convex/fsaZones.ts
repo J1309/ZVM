@@ -11,6 +11,7 @@ function zoneFromDoc(doc: any) {
     tier: doc.tier,
     surcharge: doc.surcharge,
     status: doc.status,
+    region: doc.region,
     createdAt: new Date(doc.createdAt).toISOString(),
   };
 }
@@ -32,6 +33,7 @@ export const add = mutation({
       tier: v.union(v.literal("Tier 1"), v.literal("Tier 2")),
       surcharge: v.number(),
       status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+      region: v.optional(v.union(v.literal("East"), v.literal("North"), v.literal("West"), v.literal("South"))),
     }),
   },
   handler: async (ctx, args) => {
@@ -58,6 +60,7 @@ export const update = mutation({
       tier: v.optional(v.union(v.literal("Tier 1"), v.literal("Tier 2"))),
       surcharge: v.optional(v.number()),
       status: v.optional(v.union(v.literal("active"), v.literal("pending"), v.literal("inactive"))),
+      region: v.optional(v.union(v.literal("East"), v.literal("North"), v.literal("West"), v.literal("South"))),
       createdAt: v.optional(v.string()),
     }),
   },

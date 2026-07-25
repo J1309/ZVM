@@ -1,11 +1,11 @@
 import { internalMutation } from "./_generated/server";
 
 const zones = [
-  { fsa: "M5V", city: "Toronto", province: "ON", tier: "Tier 1" as const, surcharge: 0, status: "active" as const },
-  { fsa: "V6B", city: "Vancouver", province: "BC", tier: "Tier 1" as const, surcharge: 0, status: "active" as const },
-  { fsa: "T2P", city: "Calgary", province: "AB", tier: "Tier 2" as const, surcharge: 5, status: "active" as const },
-  { fsa: "K1A", city: "Ottawa", province: "ON", tier: "Tier 2" as const, surcharge: 5, status: "active" as const },
-  { fsa: "H2X", city: "Montreal", province: "QC", tier: "Tier 1" as const, surcharge: 0, status: "pending" as const },
+  { fsa: "M5V", city: "Toronto", province: "ON", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "East" as const },
+  { fsa: "V6B", city: "Vancouver", province: "BC", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "West" as const },
+  { fsa: "T2P", city: "Calgary", province: "AB", tier: "Tier 2" as const, surcharge: 5, status: "active" as const, region: "North" as const },
+  { fsa: "K1A", city: "Ottawa", province: "ON", tier: "Tier 2" as const, surcharge: 5, status: "active" as const, region: "South" as const },
+  { fsa: "H2X", city: "Montreal", province: "QC", tier: "Tier 1" as const, surcharge: 0, status: "pending" as const, region: "East" as const },
 ];
 
 const vans = [
