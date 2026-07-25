@@ -4,6 +4,7 @@ import { useInView } from 'react-intersection-observer';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Heart, MapPin, ShieldCheck } from 'lucide-react';
 import { Skeleton } from './Skeleton';
+import { DAILY_SESSIONS } from '../lib/operatingHours';
 
 const plans = [
   {
@@ -47,17 +48,12 @@ const plans = [
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const dates = [12, 13, 14, 15, 16, 17, 18];
 
-const timeSlots = [
-  { time: '8:00 AM', available: true, van: 'Sunny' },
-  { time: '9:00 AM', available: false, van: 'Sunny' },
-  { time: '10:00 AM', available: true, van: 'Scout' },
-  { time: '11:00 AM', available: true, van: 'Scout' },
-  { time: '1:00 PM', available: true, van: 'Dash' },
-  { time: '2:00 PM', available: true, van: 'Sunny' },
-  { time: '3:00 PM', available: true, van: 'Scout' },
-  { time: '4:00 PM', available: false, van: 'Dash' },
-  { time: '5:00 PM', available: true, van: 'Sunny' },
-];
+const timeSlots = DAILY_SESSIONS.map((session, index) => ({
+  time: session.displayTime,
+  label: session.label,
+  available: index !== 1 && index !== 5,
+  van: ['Thunder', 'Storm', 'Bolt'][index % 3],
+}));
 
 const trustSignals = [
   { number: '1,200+', label: 'active members' },

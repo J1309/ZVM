@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Clock, RefreshCw } from 'lucide-react';
 import { Skeleton } from './Skeleton';
 import { getRotationDetails } from '../lib/rotation';
+import { DAILY_SESSIONS } from '../lib/operatingHours';
 
 const dates = [
   { day: 'Mon', dateNum: 13, fullDate: '2026-07-13' },
@@ -15,18 +16,12 @@ const dates = [
   { day: 'Sun', dateNum: 19, fullDate: '2026-07-19' },
 ];
 
-const timeSlots = [
-  { time: '8:00 AM', available: true, van: 'Thunder' },
-  { time: '9:00 AM', available: false, van: 'Thunder' },
-  { time: '10:00 AM', available: true, van: 'Storm' },
-  { time: '11:00 AM', available: true, van: 'Storm' },
-  { time: '12:00 PM', available: false, van: 'Lightning' },
-  { time: '1:00 PM', available: true, van: 'Bolt' },
-  { time: '2:00 PM', available: true, van: 'Thunder' },
-  { time: '3:00 PM', available: true, van: 'Storm' },
-  { time: '4:00 PM', available: false, van: 'Bolt' },
-  { time: '5:00 PM', available: true, van: 'Thunder' },
-];
+const timeSlots = DAILY_SESSIONS.map((session, index) => ({
+  time: session.displayTime,
+  label: session.label,
+  available: index !== 1 && index !== 4,
+  van: ['Thunder', 'Storm', 'Bolt'][index % 3],
+}));
 
 export default function SchedulePreview() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
