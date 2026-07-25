@@ -166,7 +166,7 @@ export default function BookNow() {
                 <div>
                   <h3 className="font-display text-xl font-bold text-[#071A3D]">Preview a pickup window</h3>
                   <p className="mt-1 flex items-center gap-1 text-sm text-[#315B96]">
-                    <MapPin className="h-4 w-4 text-brand-500" /> Example route: M5V, GTA Downtown
+                    <MapPin className="h-4 w-4 text-brand-500" /> Example route: T5H, Edmonton Downtown
                   </p>
                 </div>
                 <div className="flex gap-1">

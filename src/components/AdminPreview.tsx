@@ -40,11 +40,11 @@ function CMSPanel() {
 
 function FSAPanel() {
   const zones = [
-    { fsa: 'M5V', city: 'Toronto', tier: 'Tier 1', surcharge: '$0', region: 'East', status: 'active' },
-    { fsa: 'V6B', city: 'Vancouver', tier: 'Tier 1', surcharge: '$0', region: 'West', status: 'active' },
-    { fsa: 'T2P', city: 'Calgary', tier: 'Tier 2', surcharge: '$5', region: 'North', status: 'active' },
-    { fsa: 'K1A', city: 'Ottawa', tier: 'Tier 2', surcharge: '$5', region: 'South', status: 'active' },
-    { fsa: 'H2X', city: 'Montreal', tier: 'Tier 1', surcharge: '$0', region: 'East', status: 'pending' },
+    { fsa: 'T5A', city: 'Edmonton', tier: 'Tier 1', surcharge: '$0', region: 'East', status: 'active' },
+    { fsa: 'T5L', city: 'Edmonton', tier: 'Tier 1', surcharge: '$0', region: 'North', status: 'active' },
+    { fsa: 'T5R', city: 'Edmonton', tier: 'Tier 1', surcharge: '$0', region: 'West', status: 'active' },
+    { fsa: 'T5H', city: 'Edmonton', tier: 'Tier 1', surcharge: '$0', region: 'South', status: 'active' },
+    { fsa: 'T5X', city: 'Edmonton', tier: 'Tier 1', surcharge: '$0', region: 'South', status: 'active' },
   ];
 
   return (
@@ -127,10 +127,10 @@ function VaccinePanel() {
 
 function FleetPanel() {
   const vans = [
-    { id: 'VAN-001', name: 'Thunder', status: 'Active', sessions: 12, location: 'GTA North' },
-    { id: 'VAN-002', name: 'Storm', status: 'Active', sessions: 9, location: 'GTA West' },
+    { id: 'VAN-001', name: 'Thunder', status: 'Active', sessions: 12, location: 'Edmonton East' },
+    { id: 'VAN-002', name: 'Storm', status: 'Active', sessions: 9, location: 'Edmonton West' },
     { id: 'VAN-003', name: 'Lightning', status: 'Maintenance', sessions: 0, location: 'Shop' },
-    { id: 'VAN-004', name: 'Bolt', status: 'Active', sessions: 11, location: 'Metro Van' },
+    { id: 'VAN-004', name: 'Bolt', status: 'Active', sessions: 11, location: 'Edmonton South' },
   ];
 
   return (

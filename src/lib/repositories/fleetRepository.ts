@@ -5,10 +5,10 @@ import { api, convex } from '../convexClient';
 const KEY = 'fleet_vans';
 
 const DEFAULT_VANS: FleetVan[] = [
-  { id: 'VAN-001', name: 'Thunder', status: 'Active', location: 'GTA North', sessionsToday: 12, totalSessions: 847, createdAt: new Date().toISOString() },
-  { id: 'VAN-002', name: 'Storm', status: 'Active', location: 'GTA West', sessionsToday: 9, totalSessions: 623, createdAt: new Date().toISOString() },
+  { id: 'VAN-001', name: 'Thunder', status: 'Active', location: 'Edmonton East', sessionsToday: 12, totalSessions: 847, createdAt: new Date().toISOString() },
+  { id: 'VAN-002', name: 'Storm', status: 'Active', location: 'Edmonton West', sessionsToday: 9, totalSessions: 623, createdAt: new Date().toISOString() },
   { id: 'VAN-003', name: 'Lightning', status: 'Maintenance', location: 'Shop', sessionsToday: 0, totalSessions: 412, createdAt: new Date().toISOString() },
-  { id: 'VAN-004', name: 'Bolt', status: 'Active', location: 'Metro Van', sessionsToday: 11, totalSessions: 756, createdAt: new Date().toISOString() },
+  { id: 'VAN-004', name: 'Bolt', status: 'Active', location: 'Edmonton South', sessionsToday: 11, totalSessions: 756, createdAt: new Date().toISOString() },
 ];
 
 export async function getAllVans(): Promise<FleetVan[]> {

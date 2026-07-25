@@ -43,7 +43,7 @@ export default function Footer() {
             <div className="space-y-3 text-sm text-dark-300">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-brand-500" />
-                <span>Toronto, ON &bull; Vancouver, BC &bull; Montreal, QC</span>
+                <span>Edmonton, AB</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-brand-500" />

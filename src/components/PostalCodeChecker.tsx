@@ -5,30 +5,23 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sparkles, Calendar } from 'lucide-react';
 import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
 
-function getFsaRegion(fsa: string): ServiceZone {
-  const code = (fsa.charCodeAt(0) + fsa.charCodeAt(fsa.length - 1)) % 4;
-  return (['East', 'North', 'West', 'South'] as const)[code];
-}
+/** Edmonton T5A–T5Z zone mapping (5 FSAs per rotation sector). */
+const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
+  // East — Clareview, Beverly, Highlands, Belvedere, Lake District
+  T5A: 'East', T5B: 'East', T5C: 'East', T5E: 'East', T5Y: 'East',
+  // North — Spruce Avenue, Inglewood, Calder, Castle Downs, Pilot Sound
+  T5K: 'North', T5L: 'North', T5M: 'North', T5V: 'North', T5Z: 'North',
+  // West — Glenora, Woodcroft, Jasper Place, Winterburn, Lewis Estates
+  T5N: 'West', T5P: 'West', T5R: 'West', T5S: 'West', T5T: 'West',
+  // South — Parkdale, Downtown, Oliver, Bonnie Doon/Ottewell, Mill Woods
+  T5G: 'South', T5H: 'South', T5J: 'South', T5W: 'South', T5X: 'South',
+};
 
-const ACTIVE_FSAS = [
-  'M1B','M1C','M1E','M1G','M1H','M1J','M1K','M1L','M1M','M1N','M1P','M1R','M1S','M1T','M1V','M1W','M1X',
-  'M2H','M2J','M2K','M2L','M2M','M2N','M2P','M2R','M3A','M3B','M3C','M3H','M3J','M3K','M3L','M3M','M3N',
-  'M4A','M4B','M4C','M4E','M4G','M4H','M4J','M4K','M4L','M4M','M4N','M4P','M4R','M4S','M4T','M4V','M4W','M4X','M4Y',
-  'M5A','M5B','M5C','M5E','M5G','M5H','M5J','M5K','M5L','M5M','M5N','M5P','M5R','M5S','M5T','M5V','M5W','M5X',
-  'M6A','M6B','M6C','M6E','M6G','M6H','M6J','M6K','M6L','M6M','M6N','M6P','M6R','M6S',
-  'M9A','M9B','M9C','M9L','M9M','M9N','M9P','M9R','M9V','M9W',
-  'V5A','V5B','V5C','V5E','V5G','V5H','V5J','V5K','V5L','V5M','V5N','V5P','V5R','V5S','V5T','V5V','V5W','V5X','V5Y','V5Z',
-  'V6A','V6B','V6C','V6E','V6G','V6H','V6J','V6K','V6L','V6M','V6N','V6P','V6R','V6S','V6T','V6V','V6W','V6X','V6Y','V6Z',
-  'V7A','V7B','V7C','V7E','V7G','V7H','V7J','V7K','V7L','V7M','V7N','V7P','V7R','V7S','V7T','V7V','V7W','V7X','V7Y',
-  'V3A','V3B','V3C','V3E','V3G','V3H','V3J','V3K','V3L','V3M','V3N','V3R','V3S','V3T','V3V','V3W','V3X','V3Y','V3Z',
-  'H1A','H1B','H1C','H1E','H1G','H1H','H1J','H1K','H1L','H1M','H1N','H1P','H1R','H1S','H1T','H1V','H1W','H1X','H1Y','H1Z',
-  'H2A','H2B','H2C','H2E','H2G','H2H','H2J','H2K','H2L','H2M','H2N','H2P','H2R','H2S','H2T','H2V','H2W','H2X','H2Y','H2Z',
-  'H3A','H3B','H3C','H3E','H3G','H3H','H3J','H3K','H3L','H3M','H3N','H3P','H3R','H3S','H3T','H3V','H3W','H3X','H3Y','H3Z',
-  'T2A','T2B','T2C','T2E','T2G','T2H','T2J','T2K','T2L','T2M','T2N','T2P','T2R','T2S','T2T','T2V','T2W','T2X','T2Y','T2Z',
-  'T3A','T3B','T3C','T3E','T3G','T3H','T3J','T3K','T3L','T3M','T3N','T3P','T3R',
-  'K1A','K1B','K1C','K1E','K1G','K1H','K1J','K1K','K1L','K1M','K1N','K1P','K1R','K1S','K1T','K1V','K1W','K1X','K1Y','K1Z',
-  'K2A','K2B','K2C','K2E','K2G','K2H','K2J','K2K',
-];
+const ACTIVE_FSAS = Object.keys(EDMONTON_ZONE_MAP);
+
+function getFsaRegion(fsa: string): ServiceZone {
+  return EDMONTON_ZONE_MAP[fsa] ?? 'East';
+}
 
 type Status = 'idle' | 'loading' | 'serviceable' | 'unserviceable';
 
@@ -73,13 +66,13 @@ export default function PostalCodeChecker() {
               Coverage check
             </span>
             <h1 className="font-display text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
-              Is ZoomieVan on your route?
+              Is ZoomieVan in your neighbourhood?
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/78">
-              Enter your Canadian postal code and we will check whether a mobile dog gym route already serves your neighbourhood.
+              Enter your Edmonton postal code and we will check whether our mobile dog gym serves your area.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              {['Door-to-door visits', 'GTA and major metros', 'More routes opening soon'].map((item) => (
+              {['Door-to-door visits', 'Edmonton neighbourhoods', '8-day service rotation'].map((item) => (
                 <span key={item} className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white">
                   {item}
                 </span>
@@ -98,7 +91,7 @@ export default function PostalCodeChecker() {
                 <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-500" />
                 <input
                   type="text"
-                  placeholder="M5V 2T6"
+                  placeholder="T5J 3S9"
                   value={postalCode}
                   onChange={(event) => {
                     setPostalCode(event.target.value.toUpperCase());
@@ -213,12 +206,12 @@ export default function PostalCodeChecker() {
         >
           <div className="mb-5 flex items-center gap-2 text-sm font-bold text-brand-600">
             <Sparkles className="h-4 w-4" />
-            Currently active in major Canadian metros
+            Now serving Edmonton, Alberta
           </div>
           <div className="flex flex-wrap gap-3">
-            {['Toronto GTA', 'Vancouver Metro', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton', 'Mississauga', 'Brampton', 'Hamilton', 'Surrey'].map((city) => (
-            <span key={city} className="rounded-full border border-white/20 bg-white px-4 py-2 text-sm font-semibold text-[#071A3D]">
-                {city}
+            {['Downtown', 'Oliver', 'Clareview', 'Castle Downs', 'Mill Woods', 'Jasper Place', 'Bonnie Doon', 'Beverly', 'Glenora', 'Lewis Estates'].map((area) => (
+            <span key={area} className="rounded-full border border-white/20 bg-white px-4 py-2 text-sm font-semibold text-[#071A3D]">
+                {area}
               </span>
             ))}
           </div>

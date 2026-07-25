@@ -221,7 +221,7 @@ export default function SignupPage() {
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-black uppercase tracking-[0.12em] text-[#315B96]">City</label>
-                    <input value={address.city} onChange={(event) => setAddress({ ...address, city: event.target.value })} placeholder="Toronto" className={inputClass} />
+                    <input value={address.city} onChange={(event) => setAddress({ ...address, city: event.target.value })} placeholder="Edmonton" className={inputClass} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-black uppercase tracking-[0.12em] text-[#315B96]">Province</label>

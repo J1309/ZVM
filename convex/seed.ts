@@ -1,18 +1,18 @@
 import { internalMutation } from "./_generated/server";
 
 const zones = [
-  { fsa: "M5V", city: "Toronto", province: "ON", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "East" as const },
-  { fsa: "V6B", city: "Vancouver", province: "BC", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "West" as const },
-  { fsa: "T2P", city: "Calgary", province: "AB", tier: "Tier 2" as const, surcharge: 5, status: "active" as const, region: "North" as const },
-  { fsa: "K1A", city: "Ottawa", province: "ON", tier: "Tier 2" as const, surcharge: 5, status: "active" as const, region: "South" as const },
-  { fsa: "H2X", city: "Montreal", province: "QC", tier: "Tier 1" as const, surcharge: 0, status: "pending" as const, region: "East" as const },
+  { fsa: "T5A", city: "Edmonton", province: "AB", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "East" as const },
+  { fsa: "T5L", city: "Edmonton", province: "AB", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "North" as const },
+  { fsa: "T5R", city: "Edmonton", province: "AB", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "West" as const },
+  { fsa: "T5H", city: "Edmonton", province: "AB", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "South" as const },
+  { fsa: "T5X", city: "Edmonton", province: "AB", tier: "Tier 1" as const, surcharge: 0, status: "active" as const, region: "South" as const },
 ];
 
 const vans = [
-  { name: "Thunder", status: "Active" as const, location: "GTA North", sessionsToday: 12, totalSessions: 847 },
-  { name: "Storm", status: "Active" as const, location: "GTA West", sessionsToday: 9, totalSessions: 623 },
+  { name: "Thunder", status: "Active" as const, location: "Edmonton East", sessionsToday: 12, totalSessions: 847 },
+  { name: "Storm", status: "Active" as const, location: "Edmonton West", sessionsToday: 9, totalSessions: 623 },
   { name: "Lightning", status: "Maintenance" as const, location: "Shop", sessionsToday: 0, totalSessions: 412 },
-  { name: "Bolt", status: "Active" as const, location: "Metro Van", sessionsToday: 11, totalSessions: 756 },
+  { name: "Bolt", status: "Active" as const, location: "Edmonton South", sessionsToday: 11, totalSessions: 756 },
 ];
 
 const vaccines = [
