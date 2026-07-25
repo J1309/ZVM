@@ -80,6 +80,7 @@ function userFromDoc(doc: any) {
     name: doc.name,
     phone: doc.phone,
     address: doc.address,
+    coordinates: doc.coordinates,
     dog: doc.dog,
     vaccines: doc.vaccines,
     legalAccepted: doc.legalAccepted,

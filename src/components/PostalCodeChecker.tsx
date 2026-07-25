@@ -2,8 +2,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sparkles, Calendar } from 'lucide-react';
+import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sparkles, Calendar, Truck } from 'lucide-react';
 import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
+import { estimateLocalDriveTime } from '../lib/geo';
 
 /** Edmonton T5A–T5Z zone mapping (5 FSAs per rotation sector). */
 const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
@@ -132,9 +133,9 @@ export default function PostalCodeChecker() {
                   </div>
 
                   <div className="mt-4 rounded-xl border border-white/60 bg-white/70 p-3">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0F3D91]">
-                      <Calendar className="h-3.5 w-3.5" />
-                      Upcoming Service Rotation Dates
+                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#0F3D91]">
+                      <span className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> Upcoming Service Rotation Dates</span>
+                      <span className="flex items-center gap-1 text-[#059669] font-semibold text-[11px]"><Truck className="h-3 w-3" /> {estimateLocalDriveTime(53.54 + ((fsa.charCodeAt(2) || 65) % 10) * 0.015, -113.49 - ((fsa.charCodeAt(1) || 53) % 10) * 0.015).formattedDuration} from Fleet Hub</span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {getUpcomingActiveDatesForRegion(getFsaRegion(fsa), 4, new Date('2026-07-25')).map((d) => (

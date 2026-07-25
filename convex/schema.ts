@@ -39,6 +39,7 @@ export default defineSchema({
     phone: v.string(),
     role: v.union(v.literal("customer"), v.literal("admin")),
     address,
+    coordinates: v.optional(v.object({ lat: v.number(), lng: v.number() })),
     dog: dogProfile,
     vaccines: vaccineProfile,
     legalAccepted: v.boolean(),
@@ -97,6 +98,7 @@ export default defineSchema({
     planName: v.optional(v.string()),
     sessionFee: v.number(),
     surcharge: v.number(),
+    coordinates: v.optional(v.object({ lat: v.number(), lng: v.number() })),
     status: v.union(v.literal("completed"), v.literal("cancelled"), v.literal("scheduled")),
     ...timestampFields,
   })
