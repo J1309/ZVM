@@ -19,6 +19,8 @@ type SignupData = Omit<User, 'id' | 'createdAt' | 'passwordHash' | 'passwordSalt
 interface AuthContext {
   user: User | null;
   loading: boolean;
+  authError?: string | null;
+  retrySync?: () => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (data: SignupData) => Promise<{ success: boolean; error?: string }>;
   updateUser: (updates: Partial<User>) => Promise<void>;
@@ -135,6 +137,14 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
   const { signOut } = useClerk();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [syncCount, setSyncCount] = useState(0);
+
+  const retrySync = useCallback(() => {
+    setAuthError(null);
+    setLoading(true);
+    setSyncCount(c => c + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,35 +154,45 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
 
       if (!isSignedIn || !clerkUser) {
         setUser(null);
+        setAuthError(null);
         setLoading(false);
         return;
       }
 
-      if (!isAuthenticated) return;
+      if (!isAuthenticated) {
+        // While Clerk is signed in but Convex auth token is initializing
+        setLoading(true);
+        return;
+      }
 
       setLoading(true);
-      const appUser = await getOrCreateCurrent(
-        clerkUser.fullName || clerkUser.firstName || undefined,
-        clerkUser.primaryPhoneNumber?.phoneNumber,
-      );
+      setAuthError(null);
 
-      if (!cancelled) {
-        setUser(appUser);
-        setLoading(false);
+      try {
+        const appUser = await getOrCreateCurrent(
+          clerkUser.fullName || clerkUser.firstName || undefined,
+          clerkUser.primaryPhoneNumber?.phoneNumber,
+        );
+
+        if (!cancelled) {
+          setUser(appUser);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setUser(null);
+          setAuthError(err?.message || 'Failed to sync user profile with Convex.');
+          setLoading(false);
+        }
       }
     }
 
-    syncUser().catch(() => {
-      if (!cancelled) {
-        setUser(null);
-        setLoading(false);
-      }
-    });
+    syncUser();
 
     return () => {
       cancelled = true;
     };
-  }, [clerkUser, convexLoading, isAuthenticated, isLoaded, isSignedIn]);
+  }, [clerkUser, convexLoading, isAuthenticated, isLoaded, isSignedIn, syncCount]);
 
   const login = useCallback(async () => {
     return { success: false, error: 'Use the Clerk sign-in form.' };
@@ -195,11 +215,12 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null);
+    setAuthError(null);
     void signOut({ redirectUrl: '/' });
   }, [signOut]);
 
   return (
-    <AuthCtx.Provider value={{ user, loading, login, signup, updateUser, acceptLegal, logout }}>
+    <AuthCtx.Provider value={{ user, loading, authError, retrySync, login, signup, updateUser, acceptLegal, logout }}>
       {children}
     </AuthCtx.Provider>
   );
