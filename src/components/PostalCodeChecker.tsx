@@ -6,7 +6,7 @@ import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sp
 import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
 import { estimateLocalDriveTime } from '../lib/geo';
 
-/** Edmonton T5A–T5Z zone mapping (5 FSAs per rotation sector). */
+/** Edmonton T5 & T6 zone mapping per rotation sector. */
 const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
   // East — Clareview, Beverly, Highlands, Belvedere, Lake District
   T5A: 'East', T5B: 'East', T5C: 'East', T5E: 'East', T5Y: 'East',
@@ -14,8 +14,9 @@ const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
   T5K: 'North', T5L: 'North', T5M: 'North', T5V: 'North', T5Z: 'North',
   // West — Glenora, Woodcroft, Jasper Place, Winterburn, Lewis Estates
   T5N: 'West', T5P: 'West', T5R: 'West', T5S: 'West', T5T: 'West',
-  // South — Parkdale, Downtown, Oliver, Bonnie Doon/Ottewell, Mill Woods
+  // South — Parkdale, Downtown, Oliver, Bonnie Doon/Ottewell, Mill Woods, Windermere, Terwillegar, Ellerslie
   T5G: 'South', T5H: 'South', T5J: 'South', T5W: 'South', T5X: 'South',
+  T6W: 'South', T6H: 'South', T6X: 'South', T6E: 'South', T6L: 'South', T6K: 'South',
 };
 
 const ACTIVE_FSAS = Object.keys(EDMONTON_ZONE_MAP);
