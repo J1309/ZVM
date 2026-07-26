@@ -6,17 +6,17 @@ import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sp
 import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
 import { estimateLocalDriveTime } from '../lib/geo';
 
-/** Edmonton T5 & T6 zone mapping per rotation sector. */
+/** Complete 100% Edmonton Canada Post FSA mapping (37 total FSAs across 4 rotation sectors). */
 const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
-  // East — Clareview, Beverly, Highlands, Belvedere, Lake District
-  T5A: 'East', T5B: 'East', T5C: 'East', T5E: 'East', T5Y: 'East',
-  // North — Spruce Avenue, Inglewood, Calder, Castle Downs, Pilot Sound
-  T5K: 'North', T5L: 'North', T5M: 'North', T5V: 'North', T5Z: 'North',
-  // West — Glenora, Woodcroft, Jasper Place, Winterburn, Lewis Estates
-  T5N: 'West', T5P: 'West', T5R: 'West', T5S: 'West', T5T: 'West',
-  // South — Parkdale, Downtown, Oliver, Bonnie Doon/Ottewell, Mill Woods, Windermere, Terwillegar, Ellerslie
+  // East — Clareview, Beverly, Highlands, Belvedere, Lake District, Capilano, Ottewell, Maple/Tamarack, Energy Park
+  T5A: 'East', T5B: 'East', T5C: 'East', T5E: 'East', T5Y: 'East', T6A: 'East', T6B: 'East', T6P: 'East', T6S: 'East',
+  // North — Spruce Avenue, Inglewood, Calder, Castle Downs, Pilot Sound, Rampart
+  T5K: 'North', T5L: 'North', T5M: 'North', T5V: 'North', T5Z: 'North', T6V: 'North',
+  // West — Glenora, Woodcroft, Jasper Place, Winterburn, Lewis Estates, Edgemont
+  T5N: 'West', T5P: 'West', T5R: 'West', T5S: 'West', T5T: 'West', T6M: 'West',
+  // South — Downtown, Oliver, Parkdale, Strathearn, U of A/Strathcona, Blue Quill, Mill Woods, Riverbend, Terwillegar, Meadows, Windermere, Ellerslie
   T5G: 'South', T5H: 'South', T5J: 'South', T5W: 'South', T5X: 'South',
-  T6W: 'South', T6H: 'South', T6X: 'South', T6E: 'South', T6L: 'South', T6K: 'South',
+  T6C: 'South', T6E: 'South', T6G: 'South', T6H: 'South', T6J: 'South', T6K: 'South', T6L: 'South', T6R: 'South', T6T: 'South', T6W: 'South', T6X: 'South',
 };
 
 const ACTIVE_FSAS = Object.keys(EDMONTON_ZONE_MAP);
