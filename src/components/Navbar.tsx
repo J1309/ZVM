@@ -17,7 +17,6 @@ const navLinks = [
   { label: 'Home', href: '/', page: true },
   { label: 'About', href: '/about', page: true },
   { label: 'Pricing', href: '/#book-now', page: false },
-  { label: 'Testimonials', href: '/#testimonials', page: false },
   { label: 'Coverage', href: '/coverage', page: true },
   { label: 'FAQ', href: '/faq', page: true },
 ];

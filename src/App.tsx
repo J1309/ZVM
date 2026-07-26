@@ -23,7 +23,6 @@ const loadHero = () => import('./components/Hero');
 const loadHomeAboutPreview = () => import('./components/HomeAboutPreview');
 const loadHowItWorks = () => import('./components/HowItWorks');
 const loadBookNow = () => import('./components/BookNow');
-const loadTestimonials = () => import('./components/Testimonials');
 const loadCTA = () => import('./components/CTA');
 const loadFooter = () => import('./components/Footer');
 
@@ -31,12 +30,11 @@ const Hero = lazy(loadHero);
 const HomeAboutPreview = lazy(loadHomeAboutPreview);
 const HowItWorks = lazy(loadHowItWorks);
 const BookNow = lazy(loadBookNow);
-const Testimonials = lazy(loadTestimonials);
 const CTA = lazy(loadCTA);
 const Footer = lazy(loadFooter);
 
 const landingModules = Promise.all([
-  loadHero, loadHomeAboutPreview, loadHowItWorks, loadBookNow, loadTestimonials, loadCTA, loadFooter,
+  loadHero, loadHomeAboutPreview, loadHowItWorks, loadBookNow, loadCTA, loadFooter,
 ].map((loader) => loader()));
 
 function LandingPage() {
@@ -93,7 +91,6 @@ function LandingPage() {
           <HomeAboutPreview />
           <HowItWorks />
           <BookNow />
-          <Testimonials />
           <CTA />
           <Footer />
         </motion.div>
