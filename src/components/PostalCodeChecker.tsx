@@ -6,17 +6,21 @@ import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sp
 import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
 import { estimateLocalDriveTime } from '../lib/geo';
 
-/** Complete 100% Edmonton Canada Post FSA mapping (37 total FSAs across 4 rotation sectors). */
+/** Edmonton Metro Region Canada Post FSA mapping (43 total FSAs across Edmonton, St. Albert, Sherwood Park, Leduc, & Spruce Grove). */
 const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
-  // East — Clareview, Beverly, Highlands, Belvedere, Lake District, Capilano, Ottewell, Maple/Tamarack, Energy Park
+  // East — Clareview, Beverly, Highlands, Belvedere, Lake District, Capilano, Ottewell, Maple/Tamarack, Energy Park + Sherwood Park (T8A, T8H, T8W)
   T5A: 'East', T5B: 'East', T5C: 'East', T5E: 'East', T5Y: 'East', T6A: 'East', T6B: 'East', T6P: 'East', T6S: 'East',
-  // North — Spruce Avenue, Inglewood, Calder, Castle Downs, Pilot Sound, Rampart
+  T8A: 'East', T8H: 'East', T8W: 'East',
+  // North — Spruce Avenue, Inglewood, Calder, Castle Downs, Pilot Sound, Rampart + St. Albert (T8N)
   T5K: 'North', T5L: 'North', T5M: 'North', T5V: 'North', T5Z: 'North', T6V: 'North',
-  // West — Glenora, Woodcroft, Jasper Place, Winterburn, Lewis Estates, Edgemont
+  T8N: 'North',
+  // West — Glenora, Woodcroft, Jasper Place, Winterburn, Lewis Estates, Edgemont + Spruce Grove (T7X)
   T5N: 'West', T5P: 'West', T5R: 'West', T5S: 'West', T5T: 'West', T6M: 'West',
-  // South — Downtown, Oliver, Parkdale, Strathearn, U of A/Strathcona, Blue Quill, Mill Woods, Riverbend, Terwillegar, Meadows, Windermere, Ellerslie
+  T7X: 'West',
+  // South — Downtown, Oliver, Parkdale, Strathearn, U of A/Strathcona, Blue Quill, Mill Woods, Riverbend, Terwillegar, Meadows, Windermere, Ellerslie + Leduc (T9E)
   T5G: 'South', T5H: 'South', T5J: 'South', T5W: 'South', T5X: 'South',
   T6C: 'South', T6E: 'South', T6G: 'South', T6H: 'South', T6J: 'South', T6K: 'South', T6L: 'South', T6R: 'South', T6T: 'South', T6W: 'South', T6X: 'South',
+  T9E: 'South',
 };
 
 const ACTIVE_FSAS = Object.keys(EDMONTON_ZONE_MAP);
