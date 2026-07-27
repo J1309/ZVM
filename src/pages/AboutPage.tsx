@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Activity, ArrowRight, CheckCircle2, HeartPulse, ShieldCheck, Snowflake, Truck } from 'lucide-react';
+import { Activity, ArrowRight, CheckCircle2, HeartPulse, ShieldCheck, Snowflake, Truck, Sparkles } from 'lucide-react';
 
 const principles = [
   'Dog-led movement, never forced running',
@@ -30,6 +30,7 @@ const safetyNotes = [
 export default function AboutPage() {
   return (
     <main className="public-site min-h-screen overflow-hidden bg-[#071A3D] pt-28">
+      {/* Hero Section */}
       <section className="relative px-4 pb-14 pt-4 sm:px-6 lg:px-8 lg:pb-20">
         <div className="absolute left-0 top-20 h-96 w-96 rounded-full bg-brand-500/22 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-[#1557B7]/42 blur-3xl" />
@@ -41,6 +42,7 @@ export default function AboutPage() {
             transition={{ duration: 0.55 }}
           >
             <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#0F3D91] shadow-sm">
+              <Sparkles className="h-4 w-4 text-brand-500" />
               About ZoomieVan
             </span>
             <h1 className="font-display text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
@@ -68,20 +70,42 @@ export default function AboutPage() {
             </div>
           </motion.div>
 
+          {/* Dual Slatmill Feature Gallery Card */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, delay: 0.1 }}
-            className="friendly-card overflow-hidden rounded-3xl bg-white"
+            className="friendly-card overflow-hidden rounded-3xl bg-white shadow-2xl p-4 sm:p-5"
           >
-            <img
-              src="/images/about-bg.jpg"
-              alt="A happy dog near a ZoomieVan mobile fitness setup"
-              className="h-72 w-full object-cover sm:h-96"
-            />
-            <div className="grid gap-3 p-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
+                <img
+                  src="/images/dog machie1.png"
+                  alt="Dog on professional ZoomieVan non-motorized slatmill"
+                  className="h-64 sm:h-72 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80" />
+                <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-black/50 backdrop-blur-md p-2.5 text-xs font-bold text-white border border-white/20">
+                  🐾 Professional Slatmill Setup
+                </div>
+              </div>
+
+              <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
+                <img
+                  src="/images/dog machie2.png"
+                  alt="Supervised mobile canine cardio session on slatmill"
+                  className="h-64 sm:h-72 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80" />
+                <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-black/50 backdrop-blur-md p-2.5 text-xs font-bold text-white border border-white/20">
+                  ⚡ Safe & Supervised Running
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
               {principles.map((item) => (
-                <div key={item} className="flex items-start gap-2 rounded-2xl bg-[#F7FBFF] p-3 text-sm font-bold text-[#071A3D]">
+                <div key={item} className="flex items-start gap-2 rounded-xl bg-[#F7FBFF] p-2.5 text-xs sm:text-sm font-bold text-[#071A3D]">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                   {item}
                 </div>
@@ -91,6 +115,7 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Equipment & Slatmill Section */}
       <section className="relative bg-white px-4 py-14 text-[#071A3D] sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <div>
@@ -106,6 +131,14 @@ export default function AboutPage() {
               the speed, and the stop. That makes the experience more natural and easier to
               shape around each dog's comfort.
             </p>
+
+            <div className="mt-6 overflow-hidden rounded-2xl border border-[#D6E6FF] shadow-lg">
+              <img
+                src="/images/dog machie1.png"
+                alt="High performance dog slatmill equipment in mobile van"
+                className="h-48 w-full object-cover"
+              />
+            </div>
           </div>
 
           <div className="grid gap-5 md:grid-cols-3">
@@ -122,6 +155,7 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Fitness Schedule & Mission */}
       <section className="relative px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-center">
           <div className="keep-white rounded-3xl bg-[#071A3D] p-7 text-white sm:p-9">

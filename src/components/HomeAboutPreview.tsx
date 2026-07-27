@@ -60,22 +60,44 @@ export default function HomeAboutPreview() {
             initial={{ opacity: 0, y: 24 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="friendly-card overflow-hidden rounded-3xl bg-white"
+            className="friendly-card overflow-hidden rounded-3xl bg-white p-3 sm:p-4 shadow-xl"
           >
-            <img
-              src="/images/slatmill.jpg"
-              alt="A dog using a non-motorized slat mill inside a supervised fitness setup"
-              className="h-56 w-full object-cover sm:h-64"
-              loading="lazy"
-            />
-            <div className="grid gap-2 p-4 sm:grid-cols-3 sm:p-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
+                <img
+                  src="/images/dog machie1.png"
+                  alt="A dog using a non-motorized slat mill inside ZoomieVan"
+                  className="h-48 sm:h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-2 rounded-lg bg-black/50 backdrop-blur-md px-2 py-1 text-[10px] font-bold text-white border border-white/20">
+                  Custom Slatmill
+                </span>
+              </div>
+
+              <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
+                <img
+                  src="/images/dog machie2.png"
+                  alt="Supervised canine workout session"
+                  className="h-48 sm:h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-2 rounded-lg bg-black/50 backdrop-blur-md px-2 py-1 text-[10px] font-bold text-white border border-white/20">
+                  Supervised Cardio
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2 p-1 sm:grid-cols-3">
               {points.map(({ icon: Icon, title, text }) => (
-                <div key={title} className="rounded-2xl bg-[#F7FBFF] p-4">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF7ED] text-brand-600">
-                    <Icon className="h-5 w-5" />
+                <div key={title} className="rounded-2xl bg-[#F7FBFF] p-3">
+                  <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFF7ED] text-brand-600">
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <h3 className="text-sm font-black text-[#071A3D]">{title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-[#315B96]">{text}</p>
+                  <h3 className="text-xs font-black text-[#071A3D]">{title}</h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#315B96]">{text}</p>
                 </div>
               ))}
             </div>
