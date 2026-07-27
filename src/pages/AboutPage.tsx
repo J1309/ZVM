@@ -80,7 +80,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog machie1.png"
+                  src="/images/dog-machine1.png"
                   alt="Dog on professional ZoomieVan non-motorized slatmill"
                   className="h-64 sm:h-72 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -92,7 +92,7 @@ export default function AboutPage() {
 
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog machie2.png"
+                  src="/images/dog-machine2.png"
                   alt="Supervised mobile canine cardio session on slatmill"
                   className="h-64 sm:h-72 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -134,7 +134,7 @@ export default function AboutPage() {
 
             <div className="mt-6 overflow-hidden rounded-2xl border border-[#D6E6FF] shadow-lg">
               <img
-                src="/images/dog machie1.png"
+                src="/images/dog-machine1.png"
                 alt="High performance dog slatmill equipment in mobile van"
                 className="h-48 w-full object-cover"
               />

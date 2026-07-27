@@ -65,7 +65,7 @@ export default function HomeAboutPreview() {
             <div className="grid grid-cols-2 gap-3">
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog machie1.png"
+                  src="/images/dog-machine1.png"
                   alt="A dog using a non-motorized slat mill inside ZoomieVan"
                   className="h-48 sm:h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
@@ -78,7 +78,7 @@ export default function HomeAboutPreview() {
 
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog machie2.png"
+                  src="/images/dog-machine2.png"
                   alt="Supervised canine workout session"
                   className="h-48 sm:h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
