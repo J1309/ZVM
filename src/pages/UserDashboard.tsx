@@ -19,6 +19,16 @@ export default function UserDashboard() {
   const [showDogForm, setShowDogForm] = useState(false);
   const [dogForm, setDogForm] = useState<UserDog>(emptyDog);
   const [savingDog, setSavingDog] = useState(false);
+
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    line1: '',
+    city: '',
+    province: '',
+    postalCode: '',
+  });
+
   const [selectedPlan, setSelectedPlan] = useState<StripePlanKey>('trial_run');
   const [checkoutPlan, setCheckoutPlan] = useState<StripePlanKey | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
@@ -56,6 +66,34 @@ export default function UserDashboard() {
       setDogForm({ ...emptyDog });
     }
     setShowDogForm(true);
+  };
+
+  const openAddressForm = () => {
+    setAddressForm({
+      line1: user.address.line1 || '',
+      city: user.address.city || '',
+      province: user.address.province || '',
+      postalCode: user.address.postalCode || '',
+    });
+    setShowAddressForm(true);
+  };
+
+  const saveAddress = async () => {
+    if (!addressForm.line1 || !addressForm.city || !addressForm.province || !addressForm.postalCode) return;
+    setSavingAddress(true);
+    try {
+      await updateUser({
+        address: {
+          line1: addressForm.line1,
+          city: addressForm.city,
+          province: addressForm.province,
+          postalCode: addressForm.postalCode.toUpperCase(),
+        },
+      });
+      setShowAddressForm(false);
+    } finally {
+      setSavingAddress(false);
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -136,11 +174,6 @@ export default function UserDashboard() {
   const hasDog = !!user.dog.name;
   const hasCurrentConsent = user.legalAccepted && user.legalVersion === CURRENT_LEGAL_VERSION;
 
-  const details = [
-    { icon: User, label: 'Name', value: user.name },
-    { icon: MapPinned, label: 'Address', value: `${user.address.line1}, ${user.address.city}, ${user.address.province} ${user.address.postalCode}` },
-  ];
-
   return (
     <div className="min-h-screen bg-dark-900">
       {/* Top bar */}
@@ -187,21 +220,38 @@ export default function UserDashboard() {
         </motion.section>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-          {details.map((d, i) => (
-            <motion.div
-              key={d.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="p-5 bg-dark-800/50 rounded-xl border border-dark-600"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <d.icon className="w-4 h-4 text-brand-400" />
-                <span className="text-xs text-dark-400 uppercase tracking-wider">{d.label}</span>
+          {/* Name Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0 }}
+            className="p-5 bg-dark-800/50 rounded-xl border border-dark-600"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <User className="w-4 h-4 text-brand-400" />
+              <span className="text-xs text-dark-400 uppercase tracking-wider">Name</span>
+            </div>
+            <p className="text-sm text-white">{user.name}</p>
+          </motion.div>
+
+          {/* Address Card with Edit Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="p-5 bg-dark-800/50 rounded-xl border border-dark-600"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <MapPinned className="w-4 h-4 text-brand-400" />
+                <span className="text-xs text-dark-400 uppercase tracking-wider">Address</span>
               </div>
-              <p className="text-sm text-white">{d.value}</p>
-            </motion.div>
-          ))}
+              <button onClick={openAddressForm} className="text-xs text-brand-400 hover:underline">
+                Edit
+              </button>
+            </div>
+            <p className="text-sm text-white">{`${user.address.line1}, ${user.address.city}, ${user.address.province} ${user.address.postalCode}`}</p>
+          </motion.div>
 
           {/* Dog Card */}
           <motion.div
@@ -464,6 +514,82 @@ export default function UserDashboard() {
               >
                 {savingDog ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Address Edit Modal */}
+      {showAddressForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-dark-800 border border-dark-600 rounded-2xl w-full max-w-lg overflow-hidden"
+          >
+            <div className="flex items-center justify-between p-5 border-b border-dark-600">
+              <h2 className="font-display text-lg font-bold text-white">Edit Service Address</h2>
+              <button onClick={() => setShowAddressForm(false)} className="p-1 text-dark-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs text-dark-400 uppercase tracking-wider">Street Address</label>
+                <input
+                  value={addressForm.line1}
+                  onChange={e => setAddressForm({ ...addressForm, line1: e.target.value })}
+                  placeholder="123 Main St"
+                  className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">City</label>
+                  <input
+                    value={addressForm.city}
+                    onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
+                    placeholder="Edmonton"
+                    className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Province</label>
+                  <select
+                    value={addressForm.province}
+                    onChange={e => setAddressForm({ ...addressForm, province: e.target.value })}
+                    className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-brand-500/50"
+                  >
+                    <option value="">Select</option>
+                    {['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'].map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Postal Code</label>
+                  <input
+                    value={addressForm.postalCode}
+                    onChange={e => setAddressForm({ ...addressForm, postalCode: e.target.value.toUpperCase() })}
+                    placeholder="T6W 0L1"
+                    className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-dark-600">
+              <button
+                onClick={() => setShowAddressForm(false)}
+                className="px-5 py-2.5 text-sm font-medium rounded-xl border border-dark-500 text-dark-200 hover:bg-dark-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveAddress}
+                disabled={!addressForm.line1 || !addressForm.city || !addressForm.province || !addressForm.postalCode || savingAddress}
+                className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white hover:from-brand-500 hover:to-brand-400 transition-all shadow-lg shadow-brand-500/25 disabled:opacity-40 flex items-center gap-1.5"
+              >
+                {savingAddress ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Address
               </button>
             </div>
           </motion.div>
