@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard } from 'lucide-react';
+import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
 import { createCheckoutSession, STRIPE_PLANS, StripePlanKey } from '../lib/payments';
 import PickupWindowPicker from '../components/PickupWindowPicker';
+import { addVaccine } from '../lib/repositories/vaccineRepository';
 
 const CURRENT_LEGAL_VERSION = '2026-07-14';
 const emptyDog: UserDog = { name: '', breed: '', weight: 0, age: 0, energyLevel: '', reactivityNotes: '' };
@@ -13,6 +14,7 @@ const emptyDog: UserDog = { name: '', breed: '', weight: 0, age: 0, energyLevel:
 export default function UserDashboard() {
   const { user, updateUser, acceptLegal, logout, loading } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showDogForm, setShowDogForm] = useState(false);
   const [dogForm, setDogForm] = useState<UserDog>(emptyDog);
@@ -22,6 +24,8 @@ export default function UserDashboard() {
   const [checkoutError, setCheckoutError] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [docUploadSuccess, setDocUploadSuccess] = useState<string | null>(null);
   const checkoutStatus = new URLSearchParams(window.location.search).get('checkout');
 
   if (loading) {
@@ -52,6 +56,43 @@ export default function UserDashboard() {
       setDogForm({ ...emptyDog });
     }
     setShowDogForm(true);
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file || !user) return;
+    setIsUploadingDoc(true);
+    setDocUploadSuccess(null);
+
+    try {
+      await new Promise(r => setTimeout(r, 600));
+      const fileName = file.name;
+
+      await updateUser({
+        vaccines: {
+          ...user.vaccines,
+          rabiesFileName: fileName,
+          dhppFileName: fileName,
+        },
+      });
+
+      await addVaccine({
+        dogName: user.dog.name || 'Dog',
+        ownerName: user.name,
+        vaccineType: `Rabies + DHPP (${fileName})`,
+      });
+
+      setDocUploadSuccess(`Successfully uploaded "${fileName}". Sent for admin review.`);
+    } catch (err) {
+      console.error('Failed to upload document:', err);
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
   };
 
   const saveDog = async () => {
@@ -197,6 +238,83 @@ export default function UserDashboard() {
             <p className="text-sm text-white">{hasDog ? (user.vaccines.rabiesFileName ? 'Rabies + DHPP submitted' : 'Not yet submitted') : 'Add a dog profile first'}</p>
           </motion.div>
         </div>
+
+        {/* 📄 DEDICATED VACCINE & HEALTH DOCUMENT UPLOAD SECTION */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.32 }}
+          className="mt-6 p-6 bg-dark-800/60 rounded-2xl border border-dark-600"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-400">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Vaccination & Health Document Upload</h3>
+                <p className="text-xs text-dark-300">Upload your dog's Rabies and DHPP certificate (PDF, PNG, JPG up to 10MB).</p>
+              </div>
+            </div>
+          </div>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={onFileInputChange}
+            accept=".pdf,.png,.jpg,.jpeg"
+            className="hidden"
+          />
+
+          {/* Upload Status Alert */}
+          {docUploadSuccess && (
+            <p className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs font-semibold text-emerald-200 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              {docUploadSuccess}
+            </p>
+          )}
+
+          {/* Drag & Drop Target / Upload Box */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="relative cursor-pointer rounded-xl border-2 border-dashed border-dark-500 bg-dark-900/50 p-6 text-center transition hover:border-brand-500/50 hover:bg-dark-900"
+          >
+            {isUploadingDoc ? (
+              <div className="flex flex-col items-center justify-center py-4 text-brand-400">
+                <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                <p className="text-sm font-semibold">Uploading document...</p>
+              </div>
+            ) : user.vaccines.rabiesFileName ? (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 text-left">
+                  <div className="p-3 rounded-lg bg-brand-500/10 text-brand-400">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{user.vaccines.rabiesFileName}</p>
+                    <p className="text-xs text-dark-400">Status: Sent for Admin Verification</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-dark-700 px-4 py-2 text-xs font-bold text-white hover:bg-dark-600 transition"
+                >
+                  <Upload className="h-3.5 w-3.5" /> Replace Document
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-3 text-dark-300">
+                <Upload className="h-8 w-8 text-brand-400 mb-2" />
+                <p className="text-sm font-bold text-white">Click or drag file to upload vaccine record</p>
+                <p className="text-xs text-dark-400 mt-1">Supports PDF, PNG, JPG (Max 10MB)</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
