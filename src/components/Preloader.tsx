@@ -13,6 +13,7 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
     let completionTimer: ReturnType<typeof setTimeout> | undefined;
     let loaderTimer: ReturnType<typeof setTimeout> | undefined;
     let progressFrame: number | undefined;
+
     const finish = () => {
       if (done) return;
       done = true;
@@ -20,14 +21,14 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
       setProgress(100);
       completionTimer = setTimeout(onComplete, 400);
     };
-    const fallbackTimer = setTimeout(finish, LOADER_DURATION_MS + 2000);
+
+    const fallbackTimer = setTimeout(finish, LOADER_DURATION_MS + 500);
 
     const v = videoRef.current;
-    if (!v) return;
 
     const startTimeline = () => {
       if (loaderTimer) return;
-      v.playbackRate = LOADER_PLAYBACK_RATE;
+      if (v) v.playbackRate = LOADER_PLAYBACK_RATE;
       const startedAt = performance.now();
       const updateProgress = () => {
         setProgress(Math.min(((performance.now() - startedAt) / LOADER_DURATION_MS) * 100, 100));
@@ -36,20 +37,30 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
       updateProgress();
       loaderTimer = setTimeout(finish, LOADER_DURATION_MS);
     };
+
     const onEnd = () => finish();
 
-    if (!v.paused) startTimeline();
-    v.addEventListener('playing', startTimeline);
-    v.addEventListener('ended', onEnd);
-    void v.play();
+    // Safely trigger playback for Safari / WebKit and fallback timeline immediately
+    startTimeline();
+
+    if (v) {
+      if (!v.paused) startTimeline();
+      v.addEventListener('playing', startTimeline);
+      v.addEventListener('ended', onEnd);
+      v.play().catch(() => {
+        // Handle Safari autoplay restrictions gracefully
+      });
+    }
 
     return () => {
       clearTimeout(loaderTimer);
       clearTimeout(fallbackTimer);
       clearTimeout(completionTimer);
       if (progressFrame) cancelAnimationFrame(progressFrame);
-      v.removeEventListener('playing', startTimeline);
-      v.removeEventListener('ended', onEnd);
+      if (v) {
+        v.removeEventListener('playing', startTimeline);
+        v.removeEventListener('ended', onEnd);
+      }
     };
   }, [onComplete]);
 
