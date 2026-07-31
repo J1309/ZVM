@@ -83,6 +83,18 @@ export interface UserVaccines {
   vetPhone: string;
 }
 
+export interface Payment {
+  id: string;
+  userId: string | null;
+  planKey: string;
+  planName: string;
+  amountCents: number;
+  currency: string;
+  customerEmail: string;
+  status: 'checkout_created' | 'paid' | 'cancelled' | 'failed' | 'refunded';
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   authProviderUserId?: string;

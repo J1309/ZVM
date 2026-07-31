@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { requireIdentity } from "./auth";
+import { requireAdmin, requireIdentity } from "./auth";
 
 const LEGAL_VERSION = "2026-07-14";
 
@@ -27,6 +27,25 @@ function siteUrl(origin: string) {
   if (url.protocol !== "https:" && !local) throw new Error("SITE_URL must use HTTPS.");
   return url.origin;
 }
+
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rows = await ctx.db.query("payments").collect();
+    return rows.map(p => ({
+      id: p._id,
+      userId: p.userId ?? null,
+      planKey: p.planKey,
+      planName: p.planName,
+      amountCents: p.amountCents,
+      currency: p.currency,
+      customerEmail: p.customerEmail,
+      status: p.status,
+      createdAt: new Date(p.createdAt).toISOString(),
+    }));
+  },
+});
 
 export const getCheckoutUser = internalQuery({
   args: { authProviderUserId: v.string() },
