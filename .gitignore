@@ -21,4 +21,5 @@ Thumbs.db
 .graphify-py
 .uv-graphify-cache
 graphify-out
+.claude/
 
