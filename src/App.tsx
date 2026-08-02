@@ -15,6 +15,7 @@ import LegalPage from './pages/LegalPage';
 import AboutPage from './pages/AboutPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProductionReadinessGate from './components/ProductionReadinessGate';
+import ComingSoonModal from './components/ComingSoonModal';
 import AuthRedirect from './components/AuthRedirect';
 import { isProductionBackendReady, isProductionBuild } from './lib/runtime';
 import LandingSkeleton from './components/LandingSkeleton';
@@ -95,6 +96,8 @@ function LandingPage() {
           <Footer />
         </motion.div>
       )}
+
+      {showContent && <ComingSoonModal />}
     </div>
   );
 }
