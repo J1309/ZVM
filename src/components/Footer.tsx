@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { MapPin, Mail, Phone, Globe, MessageCircle, Camera } from 'lucide-react';
 
@@ -31,7 +32,12 @@ export default function Footer() {
   return (
     <footer className="relative bg-dark-800/50 border-t border-dark-600">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6 }}
+          className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10">
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center gap-2.5">
               <img src="/images/zvm_companyname_logo.png" alt="ZoomieVan" className="h-8 w-auto" />
@@ -88,7 +94,7 @@ export default function Footer() {
               </ul>
             </div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="py-6 border-t border-dark-600 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-dark-400">

@@ -1,6 +1,8 @@
 import { useState, useEffect, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ReactLenis } from 'lenis/react';
+import 'lenis/dist/lenis.css';
 import { AuthProvider } from './lib/auth';
 import Preloader from './components/Preloader';
 import ScrollProgress from './components/ScrollProgress';
@@ -132,6 +134,7 @@ function BackendRequired({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <ReactLenis root options={{ smoothWheel: true, anchors: true, allowNestedScroll: true }}>
     <AuthProvider>
       <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -146,5 +149,6 @@ export default function App() {
         <Route path="/legal/:page" element={<PageLayout><LegalPage /></PageLayout>} />
       </Routes>
     </AuthProvider>
+    </ReactLenis>
   );
 }
