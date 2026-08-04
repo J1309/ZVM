@@ -28,9 +28,7 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
 
     const startTimeline = () => {
       if (loaderTimer) return;
-      if (v) {
-        try { v.playbackRate = LOADER_PLAYBACK_RATE; } catch (_) { /* Safari may throw */ }
-      }
+      if (v) v.playbackRate = LOADER_PLAYBACK_RATE;
       const startedAt = performance.now();
       const updateProgress = () => {
         setProgress(Math.min(((performance.now() - startedAt) / LOADER_DURATION_MS) * 100, 100));
@@ -42,46 +40,22 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
 
     const onEnd = () => finish();
 
-    // Start the progress timeline immediately (video is background decoration)
+    // Safely trigger playback for Safari / WebKit and fallback timeline immediately
     startTimeline();
 
     if (v) {
-      // Safari autoplay: ensure attributes are set programmatically as well
       v.muted = true;
       v.playsInline = true;
-      v.setAttribute('webkit-playsinline', '');
+      v.setAttribute('webkit-playsinline', 'true');
       v.setAttribute('x-webkit-airplay', 'deny');
       v.controls = false;
-      v.preload = 'auto';
 
+      if (!v.paused) startTimeline();
       v.addEventListener('playing', startTimeline);
       v.addEventListener('ended', onEnd);
-
-      // Attempt autoplay; Safari may block it silently
-      const attemptPlay = () => {
-        const playPromise = v.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // Autoplay blocked — video stays paused, but the loader
-            // timeline runs regardless so the site still loads.
-          });
-        }
-      };
-
-      attemptPlay();
-
-      // Safari sometimes needs a second attempt after a micro-delay
-      const retryTimer = setTimeout(attemptPlay, 200);
-
-      return () => {
-        clearTimeout(loaderTimer);
-        clearTimeout(fallbackTimer);
-        clearTimeout(completionTimer);
-        clearTimeout(retryTimer);
-        if (progressFrame) cancelAnimationFrame(progressFrame);
-        v.removeEventListener('playing', startTimeline);
-        v.removeEventListener('ended', onEnd);
-      };
+      v.play().catch(() => {
+        // Handle Safari autoplay restrictions gracefully
+      });
     }
 
     return () => {
@@ -89,6 +63,10 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
       clearTimeout(fallbackTimer);
       clearTimeout(completionTimer);
       if (progressFrame) cancelAnimationFrame(progressFrame);
+      if (v) {
+        v.removeEventListener('playing', startTimeline);
+        v.removeEventListener('ended', onEnd);
+      }
     };
   }, [onComplete]);
 
@@ -106,9 +84,10 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
             autoPlay
             muted
             playsInline
-            webkit-playsinline=""
+            webkit-playsinline="true"
             controls={false}
             preload="auto"
+            poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
             disablePictureInPicture
             disableRemotePlayback
             className="preloader-video h-full w-full object-cover opacity-45"
