@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, ShieldCheck, Heart } from 'lucide-react';
 import { SignIn } from '@clerk/react';
@@ -69,8 +69,11 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  // Already signed in: no reason to show the sign-in form.
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

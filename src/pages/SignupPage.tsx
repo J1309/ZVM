@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, PenTool, Check, ChevronRight, ArrowLeft, Loader2, Eye, EyeOff, PawPrint, ShieldCheck } from 'lucide-react';
 import { SignUp } from '@clerk/react';
@@ -76,8 +76,11 @@ export default function SignupPage() {
   const [address, setAddress] = useState<UserAddress>({ line1: '', city: '', province: '', postalCode: '' });
   const [legalAccepted, setLegalAccepted] = useState(false);
 
-  const { signup } = useAuth();
+  const { user, signup } = useAuth();
   const navigate = useNavigate();
+
+  // Already signed in: no reason to show the create-account form.
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const canProceed = () => {
     switch (activeStep) {

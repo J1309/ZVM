@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Check, Heart, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 
 const plans = [
   {
@@ -53,6 +54,7 @@ export default function BookNow() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
   const [selectedPlan, setSelectedPlan] = useState(0);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <section id="book-now" className="relative overflow-hidden py-16 lg:py-24" ref={ref}>
@@ -131,11 +133,11 @@ export default function BookNow() {
           className="mt-10 text-center"
         >
           <button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate(user ? '/dashboard' : '/signup')}
             className="group inline-flex items-center gap-2.5 rounded-2xl bg-brand-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600"
           >
             <ShieldCheck className="h-4 w-4" />
-            Create account to book
+            {user ? 'Book a session' : 'Create account to book'}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </button>
           <p className="mt-3 text-sm text-white/75">

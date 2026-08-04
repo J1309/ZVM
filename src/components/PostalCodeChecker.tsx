@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, CheckCircle2, AlertCircle, ArrowRight, Mail, Loader2, Route, Sparkles, Calendar, Truck } from 'lucide-react';
 import { getUpcomingActiveDatesForRegion, ServiceZone } from '../lib/rotation';
 import { estimateLocalDriveTime } from '../lib/geo';
+import { useAuth } from '../lib/auth';
 
 /** Edmonton Metro Region Canada Post FSA mapping (43 total FSAs across Edmonton, St. Albert, Sherwood Park, Leduc, & Spruce Grove). */
 const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
@@ -38,6 +39,7 @@ export default function PostalCodeChecker() {
   const [status, setStatus] = useState<Status>('idle');
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const fsa = postalCode.toUpperCase().replace(/\s/g, '').slice(0, 3);
 
@@ -152,10 +154,10 @@ export default function PostalCodeChecker() {
                   </div>
 
                   <button
-                    onClick={() => navigate('/signup')}
+                    onClick={() => navigate(user ? '/dashboard' : '/signup')}
                     className="keep-white mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#16a34a] py-3 font-bold transition hover:bg-[#15803d]"
                   >
-                    Book your first run
+                    {user ? 'Book a session' : 'Book your first run'}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </motion.div>
