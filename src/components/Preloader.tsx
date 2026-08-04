@@ -28,7 +28,9 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
 
     const startTimeline = () => {
       if (loaderTimer) return;
-      if (v) v.playbackRate = LOADER_PLAYBACK_RATE;
+      if (v) {
+        try { v.playbackRate = LOADER_PLAYBACK_RATE; } catch (_) { /* Safari may throw */ }
+      }
       const startedAt = performance.now();
       const updateProgress = () => {
         setProgress(Math.min(((performance.now() - startedAt) / LOADER_DURATION_MS) * 100, 100));
@@ -40,16 +42,46 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
 
     const onEnd = () => finish();
 
-    // Safely trigger playback for Safari / WebKit and fallback timeline immediately
+    // Start the progress timeline immediately (video is background decoration)
     startTimeline();
 
     if (v) {
-      if (!v.paused) startTimeline();
+      // Safari autoplay: ensure attributes are set programmatically as well
+      v.muted = true;
+      v.playsInline = true;
+      v.setAttribute('webkit-playsinline', '');
+      v.setAttribute('x-webkit-airplay', 'deny');
+      v.controls = false;
+      v.preload = 'auto';
+
       v.addEventListener('playing', startTimeline);
       v.addEventListener('ended', onEnd);
-      v.play().catch(() => {
-        // Handle Safari autoplay restrictions gracefully
-      });
+
+      // Attempt autoplay; Safari may block it silently
+      const attemptPlay = () => {
+        const playPromise = v.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // Autoplay blocked — video stays paused, but the loader
+            // timeline runs regardless so the site still loads.
+          });
+        }
+      };
+
+      attemptPlay();
+
+      // Safari sometimes needs a second attempt after a micro-delay
+      const retryTimer = setTimeout(attemptPlay, 200);
+
+      return () => {
+        clearTimeout(loaderTimer);
+        clearTimeout(fallbackTimer);
+        clearTimeout(completionTimer);
+        clearTimeout(retryTimer);
+        if (progressFrame) cancelAnimationFrame(progressFrame);
+        v.removeEventListener('playing', startTimeline);
+        v.removeEventListener('ended', onEnd);
+      };
     }
 
     return () => {
@@ -57,10 +89,6 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
       clearTimeout(fallbackTimer);
       clearTimeout(completionTimer);
       if (progressFrame) cancelAnimationFrame(progressFrame);
-      if (v) {
-        v.removeEventListener('playing', startTimeline);
-        v.removeEventListener('ended', onEnd);
-      }
     };
   }, [onComplete]);
 
@@ -72,13 +100,19 @@ export default function Preloader({ onComplete }: { onComplete: () => void }) {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="absolute inset-0 overflow-hidden">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={videoRef}
             autoPlay
             muted
             playsInline
+            webkit-playsinline=""
+            controls={false}
             preload="auto"
-            className="h-full w-full object-cover opacity-45"
+            disablePictureInPicture
+            disableRemotePlayback
+            className="preloader-video h-full w-full object-cover opacity-45"
+            style={{ pointerEvents: 'none' }}
           >
             <source src="/loader2.mp4" type="video/mp4" />
           </video>

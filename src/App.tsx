@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy } from 'react';
+import { useState, useEffect, lazy, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ReactLenis } from 'lenis/react';
@@ -39,6 +39,34 @@ const Footer = lazy(loadFooter);
 const landingModules = Promise.all([
   loadHero, loadHomeAboutPreview, loadHowItWorks, loadBookNow, loadCTA, loadFooter,
 ].map((loader) => loader()));
+
+/** Detect Safari / WebKit — Lenis smooth scroll breaks scrolling on these browsers */
+function detectSafari(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // Safari on macOS/iOS: contains "Safari" but NOT "Chrome" or "Chromium"
+  const isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg/i.test(ua);
+  // Also check for any iOS browser (all use WebKit under the hood)
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return isSafari || isIOS;
+}
+
+/** Scroll wrapper — uses Lenis on supported browsers, native scroll on Safari/iOS */
+function ScrollWrapper({ children }: { children: React.ReactNode }) {
+  const isSafari = useMemo(() => detectSafari(), []);
+
+  if (isSafari) {
+    // Safari: use native scrolling — Lenis breaks touch scroll, anchor links,
+    // and can freeze the page on iOS Safari.
+    return <>{children}</>;
+  }
+
+  return (
+    <ReactLenis root options={{ smoothWheel: true, anchors: true, allowNestedScroll: true }}>
+      {children}
+    </ReactLenis>
+  );
+}
 
 function LandingPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -134,7 +162,7 @@ function BackendRequired({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <ReactLenis root options={{ smoothWheel: true, anchors: true, allowNestedScroll: true }}>
+    <ScrollWrapper>
     <AuthProvider>
       <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -149,6 +177,6 @@ export default function App() {
         <Route path="/legal/:page" element={<PageLayout><LegalPage /></PageLayout>} />
       </Routes>
     </AuthProvider>
-    </ReactLenis>
+    </ScrollWrapper>
   );
 }

@@ -246,3 +246,26 @@ body {
   pointer-events: none;
   z-index: 1;
 }
+
+/* Safari / WebKit: hide native video play button and controls overlay */
+.preloader-video::-webkit-media-controls {
+  display: none !important;
+  -webkit-appearance: none;
+}
+.preloader-video::-webkit-media-controls-panel {
+  display: none !important;
+  -webkit-appearance: none;
+}
+.preloader-video::-webkit-media-controls-play-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+.preloader-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+.preloader-video::-webkit-media-controls-enclosure {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
