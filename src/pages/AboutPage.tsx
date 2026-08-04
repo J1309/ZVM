@@ -204,18 +204,16 @@ export default function AboutPage() {
       {/* Meet the Founder */}
       <section className="relative bg-white px-4 py-14 text-[#071A3D] sm:px-6 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-7xl">
-          <motion.div {...reveal()} className="max-w-2xl">
-            <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#FFF7ED] px-4 py-2 text-sm font-bold text-brand-700">
-              <PawPrint className="h-4 w-4" />
+          {/* Prominent Section Header */}
+          <motion.div {...reveal()} className="mb-8 sm:mb-10">
+            <span className="inline-flex items-center gap-2.5 rounded-full bg-[#FFF7ED] border border-brand-200 px-5 py-2 text-base sm:text-lg font-black text-brand-700 shadow-sm">
+              <PawPrint className="h-5 w-5 text-brand-500" />
               Meet the Founder
             </span>
-            <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-              Hi, I&rsquo;m Megha George, the founder of Zoomie Van.
-            </h2>
           </motion.div>
 
-          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14">
-            {/* Portrait */}
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14">
+            {/* Left Column: Portrait */}
             <motion.div {...reveal(0.05)} className="lg:sticky lg:top-28 lg:self-start">
               <FounderPortrait />
 
@@ -228,8 +226,12 @@ export default function AboutPage() {
               </div>
             </motion.div>
 
-            {/* Letter */}
+            {/* Right Column: Greeting Heading & Letter */}
             <motion.div {...reveal(0.1)}>
+              <h2 className="font-display text-3xl font-extrabold leading-tight text-[#071A3D] sm:text-4xl lg:text-5xl mb-6">
+                Hi, I&rsquo;m Megha George, the founder of Zoomie Van.
+              </h2>
+
               <div className="space-y-5 text-base leading-relaxed text-[#315B96] sm:text-[17px] sm:leading-8">
                 {founderLetter.map((paragraph) => (
                   <p key={paragraph.slice(0, 40)}>{paragraph}</p>
