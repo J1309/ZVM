@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  Activity, ArrowRight, CheckCircle2, HeartPulse, ShieldCheck, Snowflake,
+  Activity, ArrowRight, CheckCircle2, ShieldCheck,
   Truck, Sparkles, PawPrint, Quote, UserRound, Gauge, Home,
 } from 'lucide-react';
 
@@ -19,21 +19,30 @@ const trustStats = [
   { icon: ShieldCheck, value: 'Supervised', label: 'Every single run' },
 ];
 
-const safetyNotes = [
+const sessionTimeline = [
   {
-    icon: ShieldCheck,
-    title: 'Controlled environment',
-    text: 'A session can be paused, shortened, or stopped when a handler believes continuing is not right for the dog.',
+    step: '01',
+    title: 'Doorstep Pickup & Safety Check',
+    subtitle: 'Arrival & Greeting',
+    description: 'We arrive at your door in the climate-controlled ZoomieVan, greet your dog, and fit them safely with our specialized harness.',
   },
   {
-    icon: HeartPulse,
-    title: 'Personalized pace',
-    text: 'The goal is a positive outlet, not a race. Sessions are shaped around comfort, stamina, and confidence.',
+    step: '02',
+    title: 'Dog-Paced Slat Mill Run',
+    subtitle: 'Self-Powered Exercise',
+    description: 'Your dog controls the movement, speed, and stop. The non-motorized belt moves only when your dog walks or runs.',
   },
   {
-    icon: Snowflake,
-    title: 'Weather-independent',
-    text: 'The van is climate-controlled, so exercise is less dependent on rain, snow, heat, or crowded parks.',
+    step: '03',
+    title: 'Supervised Conditioning & Water Breaks',
+    subtitle: '1-on-1 Continuous Care',
+    description: 'Our certified handler stays with your dog every second—monitoring stamina, providing fresh water, and giving positive encouragement.',
+  },
+  {
+    step: '04',
+    title: 'Cool Down & Happy Return',
+    subtitle: 'Fulfilled & Relaxed',
+    description: 'After a gentle cool-down walk and towel-off, we return your dog to your door happy, relaxed, and fully exercised!',
   },
 ];
 
@@ -279,21 +288,54 @@ export default function AboutPage() {
             </motion.div>
           </div>
 
-          {/* Bottom row: Horizontal 3-column cards for safety notes */}
-          <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">
-            {safetyNotes.map(({ icon: Icon, title, text }, index) => (
-              <motion.article
-                key={title}
-                {...reveal(index * 0.08)}
-                className="rounded-3xl border border-[#D6E6FF] bg-white p-6 shadow-md hover:border-brand-300 hover:shadow-xl transition-all"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EAF2FF] text-[#0F3D91]">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <h3 className="font-display text-lg font-bold text-[#071A3D]">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#315B96]">{text}</p>
-              </motion.article>
-            ))}
+          {/* Bottom row: Interactive Session Timeline Feature */}
+          <div className="mt-16 border-t border-[#D6E6FF] pt-14">
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-3.5 py-1 text-xs font-bold text-brand-700 mb-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                Session Timeline
+              </span>
+              <h3 className="font-display text-2xl font-bold text-[#071A3D] sm:text-3xl">
+                How Your Dog&apos;s Session Unfolds
+              </h3>
+              <p className="mt-2 text-sm text-[#315B96]">
+                From doorstep pickup to cool-down return, every minute is tailored for safety, fun, and fitness.
+              </p>
+            </div>
+
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative">
+              {sessionTimeline.map((item, index) => (
+                <motion.div
+                  key={item.step}
+                  {...reveal(index * 0.08)}
+                  className="group relative flex flex-col justify-between rounded-3xl border border-[#D6E6FF] bg-white p-6 shadow-lg hover:border-brand-400 hover:shadow-2xl transition-all"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-500 text-sm font-black text-white shadow-md shadow-brand-500/25">
+                        {item.step}
+                      </span>
+                      <span className="rounded-full bg-[#FFF7ED] px-2.5 py-1 text-[10px] font-bold text-brand-700">
+                        {item.subtitle}
+                      </span>
+                    </div>
+
+                    <h4 className="font-display text-base font-bold text-[#071A3D] group-hover:text-brand-600 transition-colors">
+                      {item.title}
+                    </h4>
+
+                    <p className="mt-2 text-xs leading-relaxed text-[#315B96]">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  <div className="mt-5 pt-3 border-t border-[#EAF2FF] flex items-center justify-between text-[11px] font-semibold text-[#0F3D91]">
+                    <span>Phase {index + 1} of 4</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-brand-500 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
