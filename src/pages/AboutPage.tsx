@@ -51,32 +51,30 @@ function FounderPortrait() {
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#EAF2FF] shadow-2xl">
+    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#EAF2FF] shadow-2xl group">
       {!failed ? (
         <img
-          src="/images/founder-megha.jpg"
+          src="/images/owner-img.jpeg"
           alt="Megha George, founder of ZoomieVan"
           width={800}
           height={1000}
           loading="lazy"
           onError={() => setFailed(true)}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#EAF2FF] via-[#F7FBFF] to-[#FFF7ED] p-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-[#0F3D91] shadow-sm">
             <UserRound className="h-8 w-8" />
           </div>
-          <p className="font-display text-base font-bold text-[#071A3D]">Founder photo</p>
-          <p className="max-w-[15rem] text-xs leading-relaxed text-[#315B96]">
-            Add an image at{' '}
-            <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-[#0F3D91]">
-              /images/founder-megha.jpg
-            </code>{' '}
-            to display it here.
-          </p>
+          <p className="font-display text-base font-bold text-[#071A3D]">Megha George</p>
+          <p className="text-xs text-[#315B96]">Founder, ZoomieVan Inc.</p>
         </div>
       )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071A3D]/60 via-transparent to-transparent" />
+      <span className="absolute bottom-3 left-3 rounded-xl bg-black/60 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold text-white border border-white/20">
+        Megha George &mdash; Founder
+      </span>
     </div>
   );
 }
