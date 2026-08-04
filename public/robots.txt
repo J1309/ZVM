@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /signup
+Disallow: /auth/redirect
+
+Sitemap: https://www.zoomievan.ca/sitemap.xml
