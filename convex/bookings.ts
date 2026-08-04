@@ -96,7 +96,7 @@ export const reserveMany = internalMutation({
         planName: args.planName,
         sessionFee: perSessionFee,
         surcharge: args.surcharge,
-        status: "scheduled",
+        status: "pending_payment",
         createdAt: now,
         updatedAt: now,
       }));
@@ -111,7 +111,9 @@ export const releaseReservations = internalMutation({
   handler: async (ctx, args) => {
     for (const bookingId of args.bookingIds) {
       const booking = await ctx.db.get(bookingId);
-      if (booking && booking.status === "scheduled") await ctx.db.delete(bookingId);
+      if (booking && (booking.status === "pending_payment" || booking.status === "scheduled")) {
+        await ctx.db.patch(bookingId, { status: "cancelled", updatedAt: Date.now() });
+      }
     }
   },
 });

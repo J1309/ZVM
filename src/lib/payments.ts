@@ -22,3 +22,8 @@ export async function createCheckoutSession(planKey: StripePlanKey, sessions: Se
     sessions,
   });
 }
+
+export async function cancelPendingCheckout() {
+  if (!convex) return;
+  return convex.mutation(api.payments.cancelPendingCheckout, {});
+}

@@ -99,7 +99,7 @@ export default defineSchema({
     sessionFee: v.number(),
     surcharge: v.number(),
     coordinates: v.optional(v.object({ lat: v.number(), lng: v.number() })),
-    status: v.union(v.literal("completed"), v.literal("cancelled"), v.literal("scheduled")),
+    status: v.union(v.literal("completed"), v.literal("cancelled"), v.literal("scheduled"), v.literal("pending_payment")),
     ...timestampFields,
   })
     .index("by_user", ["userId"])

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery, query } from "./_generated/server";
+import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, requireIdentity } from "./auth";
 
@@ -122,14 +122,38 @@ export const markCheckoutSession = internalMutation({
       updatedAt: Date.now(),
     });
 
-    // Payment did not complete (or was refunded): release every held slot so
-    // they become bookable again. Paid reservations stay 'scheduled'.
-    if (args.status !== "paid" && payment.bookingIds) {
+    // When paid, promote pending_payment reservations to 'scheduled'.
+    // Otherwise, release un-paid / cancelled / failed / refunded reservations.
+    if (payment.bookingIds) {
+      const targetStatus = args.status === "paid" ? "scheduled" : "cancelled";
       for (const bookingId of payment.bookingIds) {
         const booking = await ctx.db.get(bookingId);
-        if (booking && booking.status === "scheduled") {
-          await ctx.db.patch(bookingId, { status: "cancelled", updatedAt: Date.now() });
+        if (booking && (booking.status === "pending_payment" || booking.status === "scheduled")) {
+          await ctx.db.patch(bookingId, { status: targetStatus, updatedAt: Date.now() });
         }
+      }
+    }
+  },
+});
+
+export const cancelPendingCheckout = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx);
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_auth_provider_user_id", q => q.eq("authProviderUserId", identity.subject))
+      .unique();
+    if (!user) return;
+
+    const pendingBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user", q => q.eq("userId", user._id))
+      .collect();
+
+    for (const b of pendingBookings) {
+      if (b.status === "pending_payment") {
+        await ctx.db.patch(b._id, { status: "cancelled", updatedAt: Date.now() });
       }
     }
   },

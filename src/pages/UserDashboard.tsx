@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
-import { createCheckoutSession, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
+import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
 import PickupWindowPicker from '../components/PickupWindowPicker';
 import { addVaccine } from '../lib/repositories/vaccineRepository';
 
@@ -39,6 +39,15 @@ export default function UserDashboard() {
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [docUploadSuccess, setDocUploadSuccess] = useState<string | null>(null);
   const checkoutStatus = new URLSearchParams(window.location.search).get('checkout');
+
+  useEffect(() => {
+    if (checkoutStatus === 'cancelled') {
+      cancelPendingCheckout().catch(() => {});
+      setPickedSessions([]);
+      setSessionsConfirmed(false);
+      setCheckoutPlan(null);
+    }
+  }, [checkoutStatus]);
 
   if (loading) {
     return (
