@@ -54,6 +54,8 @@ export interface Booking {
   customerName: string;
   dogName: string;
   date: string;
+  timeSlot?: string;
+  planName?: string;
   sessionFee: number;
   surcharge: number;
   status: 'completed' | 'cancelled' | 'scheduled';

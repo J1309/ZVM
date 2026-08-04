@@ -67,6 +67,9 @@ export const getCheckoutUser = internalQuery({
 export const recordCheckoutSession = internalMutation({
   args: {
     userId: v.id("users"),
+    bookingId: v.id("bookings"),
+    sessionDate: v.string(),
+    sessionTimeSlot: v.string(),
     stripeCheckoutSessionId: v.string(),
     planKey,
     planName: v.string(),
@@ -119,6 +122,15 @@ export const markCheckoutSession = internalMutation({
       status: args.status,
       updatedAt: Date.now(),
     });
+
+    // Payment did not complete (or was refunded): release the held slot so
+    // it becomes bookable again. Paid reservations stay 'scheduled'.
+    if (args.status !== "paid" && payment.bookingId) {
+      const booking = await ctx.db.get(payment.bookingId);
+      if (booking && booking.status === "scheduled") {
+        await ctx.db.patch(payment.bookingId, { status: "cancelled", updatedAt: Date.now() });
+      }
+    }
   },
 });
 
@@ -126,6 +138,8 @@ export const createCheckoutSession = action({
   args: {
     planKey,
     origin: v.string(),
+    date: v.string(),
+    timeSlot: v.string(),
   },
   handler: async (ctx, args): Promise<{ url: string; checkoutSessionId: string }> => {
     const identity = await requireIdentity(ctx);
@@ -145,42 +159,64 @@ export const createCheckoutSession = action({
     }
     if (!user.dogName) throw new Error("Complete your dog profile before checkout.");
 
-    const baseUrl = siteUrl(args.origin);
-    const body = new URLSearchParams();
-    body.set("mode", "payment");
-    body.set("line_items[0][price]", priceId);
-    body.set("line_items[0][quantity]", "1");
-    body.set("success_url", `${baseUrl}/dashboard?checkout=success`);
-    body.set("cancel_url", `${baseUrl}/dashboard?checkout=cancelled`);
-    body.set("customer_email", user.email);
-    body.set("client_reference_id", user.id);
-    body.set("metadata[userId]", user.id);
-    body.set("metadata[planKey]", args.planKey);
-    body.set("metadata[planName]", plan.name);
-
-    const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${stripeSecretKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-    });
-    const session = await response.json();
-
-    if (!response.ok) throw new Error(session.error?.message || "Stripe checkout could not be started.");
-    if (!session.id || !session.url) throw new Error("Stripe did not return a checkout URL.");
-
-    await ctx.runMutation(internal.payments.recordCheckoutSession, {
+    // Reserve the slot BEFORE creating the Stripe session — this atomically
+    // rejects a double-booking. The webhook later confirms (on paid) or the
+    // reservation is released (on failure/expiry).
+    const bookingId = await ctx.runMutation(internal.bookings.reserve, {
       userId: user.id,
-      stripeCheckoutSessionId: session.id,
-      planKey: args.planKey,
+      date: args.date,
+      timeSlot: args.timeSlot,
       planName: plan.name,
-      amountCents: plan.amountCents,
-      currency: "cad",
-      customerEmail: user.email,
+      sessionFee: plan.amountCents / 100,
+      surcharge: 0,
     });
 
-    return { url: session.url, checkoutSessionId: session.id };
+    try {
+      const baseUrl = siteUrl(args.origin);
+      const body = new URLSearchParams();
+      body.set("mode", "payment");
+      body.set("line_items[0][price]", priceId);
+      body.set("line_items[0][quantity]", "1");
+      body.set("success_url", `${baseUrl}/dashboard?checkout=success`);
+      body.set("cancel_url", `${baseUrl}/dashboard?checkout=cancelled`);
+      body.set("customer_email", user.email);
+      body.set("client_reference_id", user.id);
+      body.set("metadata[userId]", user.id);
+      body.set("metadata[planKey]", args.planKey);
+      body.set("metadata[planName]", plan.name);
+      body.set("metadata[sessionDate]", args.date);
+      body.set("metadata[sessionTimeSlot]", args.timeSlot);
+
+      const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+      const session = await response.json();
+
+      if (!response.ok) throw new Error(session.error?.message || "Stripe checkout could not be started.");
+      if (!session.id || !session.url) throw new Error("Stripe did not return a checkout URL.");
+
+      await ctx.runMutation(internal.payments.recordCheckoutSession, {
+        userId: user.id,
+        bookingId,
+        sessionDate: args.date,
+        sessionTimeSlot: args.timeSlot,
+        stripeCheckoutSessionId: session.id,
+        planKey: args.planKey,
+        planName: plan.name,
+        amountCents: plan.amountCents,
+        currency: "cad",
+        customerEmail: user.email,
+      });
+
+      return { url: session.url, checkoutSessionId: session.id };
+    } catch (error) {
+      await ctx.runMutation(internal.bookings.releaseReservation, { bookingId });
+      throw error;
+    }
   },
 });

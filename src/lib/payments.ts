@@ -9,10 +9,12 @@ export const STRIPE_PLANS: Array<{ key: StripePlanKey; name: string; price: numb
   { key: 'single_run', name: 'Single Run', price: 35, summary: '1 extra session' },
 ];
 
-export async function createCheckoutSession(planKey: StripePlanKey) {
+export async function createCheckoutSession(planKey: StripePlanKey, date: string, timeSlot: string) {
   if (!convex) throw new Error('Production backend is not connected yet.');
   return convex.action(api.payments.createCheckoutSession, {
     planKey,
     origin: window.location.origin,
+    date,
+    timeSlot,
   });
 }

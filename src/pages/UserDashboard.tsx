@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
+import { DailySession } from '../lib/operatingHours';
 import { createCheckoutSession, STRIPE_PLANS, StripePlanKey } from '../lib/payments';
 import PickupWindowPicker from '../components/PickupWindowPicker';
 import { addVaccine } from '../lib/repositories/vaccineRepository';
@@ -30,6 +31,7 @@ export default function UserDashboard() {
   });
 
   const [selectedPlan, setSelectedPlan] = useState<StripePlanKey>('trial_run');
+  const [selectedBooking, setSelectedBooking] = useState<{ session: DailySession; dateStr: string } | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<StripePlanKey | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
@@ -142,6 +144,10 @@ export default function UserDashboard() {
   };
 
   const startCheckout = async () => {
+    if (!selectedBooking) {
+      setCheckoutError('Choose a session date and time before checkout.');
+      return;
+    }
     if (!user.legalAccepted || user.legalVersion !== CURRENT_LEGAL_VERSION) {
       setCheckoutError('Accept the current service terms before checkout.');
       return;
@@ -149,10 +155,16 @@ export default function UserDashboard() {
     setCheckoutPlan(selectedPlan);
     setCheckoutError('');
     try {
-      const session = await createCheckoutSession(selectedPlan);
+      // The server reserves the slot (rejecting double-bookings) before
+      // returning the Stripe URL; the webhook confirms it on payment.
+      const session = await createCheckoutSession(
+        selectedPlan,
+        selectedBooking.dateStr,
+        selectedBooking.session.displayTime,
+      );
       window.location.assign(session.url);
     } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : 'Stripe checkout could not be started.');
+      setCheckoutError(error instanceof Error ? error.message : 'Checkout could not be started.');
       setCheckoutPlan(null);
     }
   };
@@ -366,12 +378,34 @@ export default function UserDashboard() {
           </div>
         </motion.div>
 
+        {/* Step 1 — Choose a session date & time */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-8"
+        >
+          <div className="mb-3 flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">1</span>
+            <h2 className="font-display text-lg font-bold text-white">Choose your session</h2>
+          </div>
+          <PickupWindowPicker
+            userFsa={user.address.postalCode?.slice(0, 3) || 'T5H'}
+            onSelectSlot={setSelectedBooking}
+          />
+        </motion.div>
+
+        {/* Step 2 — Pay for your plan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           className="mt-6 p-5 bg-brand-500/5 rounded-xl border border-brand-500/20"
         >
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">2</span>
+            <h2 className="font-display text-lg font-bold text-white">Pay for your plan</h2>
+          </div>
           {checkoutStatus === 'success' && (
             <p className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
               Checkout completed. We are verifying the payment before confirming your booking.
@@ -411,9 +445,18 @@ export default function UserDashboard() {
               </button>
             </div>
           )}
-          <p className="text-sm text-dark-300 mb-4">
-            Ready for a session? Check availability and book a visit.
-          </p>
+          {selectedBooking ? (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>
+                Selected session: <span className="font-semibold">{selectedBooking.session.displayTime}</span> ({selectedBooking.session.label}) on {selectedBooking.dateStr}
+              </span>
+            </div>
+          ) : (
+            <p className="mb-4 rounded-xl border border-dark-600 bg-dark-800/50 px-4 py-3 text-sm text-dark-300">
+              Pick a session above to continue to payment.
+            </p>
+          )}
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <select
               value={selectedPlan}
@@ -428,7 +471,7 @@ export default function UserDashboard() {
             </select>
             <button
               onClick={startCheckout}
-              disabled={checkoutPlan !== null || !hasCurrentConsent || !hasDog}
+              disabled={checkoutPlan !== null || !hasCurrentConsent || !hasDog || !selectedBooking}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:from-brand-500 hover:to-brand-400 disabled:opacity-60"
             >
               {checkoutPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
@@ -436,18 +479,6 @@ export default function UserDashboard() {
             </button>
           </div>
           {checkoutError && <p className="mt-3 text-sm text-red-300">{checkoutError}</p>}
-        </motion.div>
-
-        {/* Pickup Window & Session Scheduling */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-8"
-        >
-          <PickupWindowPicker
-            userFsa={user.address.postalCode?.slice(0, 3) || 'T5H'}
-          />
         </motion.div>
       </div>
 

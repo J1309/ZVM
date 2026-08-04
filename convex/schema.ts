@@ -104,10 +104,14 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_date", ["date"])
+    .index("by_date_slot", ["date", "timeSlot"])
     .index("by_status", ["status"]),
 
   payments: defineTable({
     userId: v.optional(v.id("users")),
+    bookingId: v.optional(v.id("bookings")),
+    sessionDate: v.optional(v.string()),
+    sessionTimeSlot: v.optional(v.string()),
     stripeCheckoutSessionId: v.string(),
     stripePaymentIntentId: v.optional(v.string()),
     planKey: v.string(),

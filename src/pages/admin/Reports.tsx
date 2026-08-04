@@ -45,7 +45,7 @@ export default function AdminReports() {
 
   const handleExport = () => {
     const rows = [
-      ['Booking ID', 'Van', 'FSA', 'Customer', 'Dog', 'Date', 'Fee', 'Surcharge', 'Total', 'Status'],
+      ['Booking ID', 'Van', 'FSA', 'Customer', 'Dog', 'Date', 'Time Slot', 'Plan', 'Fee', 'Surcharge', 'Total', 'Status'],
       ...bookings.map(b => [
         b.id,
         vans.find(v => v.id === b.vanId)?.name || b.vanId,
@@ -53,6 +53,8 @@ export default function AdminReports() {
         b.customerName,
         b.dogName,
         b.date,
+        b.timeSlot || '',
+        b.planName || '',
         b.sessionFee.toFixed(2),
         b.surcharge.toFixed(2),
         (b.sessionFee + b.surcharge).toFixed(2),
