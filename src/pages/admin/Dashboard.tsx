@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Calendar, DollarSign, Activity, MapPinned } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Activity, MapPinned } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
 import { getAllVans } from '../../lib/repositories/fleetRepository';
 import { getAllZones } from '../../lib/repositories/fsaRepository';
@@ -36,19 +36,20 @@ export default function AdminDashboard() {
     );
   }
 
-  const completedBookings = bookings.filter(b => b.status === 'completed');
-  const totalRevenue = completedBookings.reduce((sum, b) => sum + b.sessionFee + b.surcharge, 0);
+  const paidBookings = bookings.filter(b => b.status === 'scheduled' || b.status === 'completed');
+  const totalRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
+  const scheduledSessions = bookings.filter(b => b.status === 'scheduled').length;
+  const completedSessions = bookings.filter(b => b.status === 'completed').length;
   const activeVans = vans.filter(v => v.status === 'Active').length;
   const activeZones = zones.filter(z => z.status === 'active').length;
   const pendingVaccines = vaccines.filter(v => v.status === 'pending').length;
-  const totalSessions = completedBookings.length;
-  const uniqueClients = new Set(bookings.map(b => b.customerName)).size;
+  const uniqueClients = new Set(paidBookings.map(b => b.customerName)).size;
 
   const stats = [
-    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
-    { label: 'Completed Sessions', value: totalSessions.toLocaleString(), icon: Activity, color: 'text-brand-400', bg: 'bg-brand-500/10' },
-    { label: 'Active Clients', value: uniqueClients.toLocaleString(), icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-    { label: 'Active Vans', value: `${activeVans}/${vans.length}`, icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+    { label: 'Total Paid Revenue', value: `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`, icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
+    { label: 'Scheduled (Upcoming)', value: scheduledSessions.toLocaleString(), icon: Activity, color: 'text-brand-400', bg: 'bg-brand-500/10' },
+    { label: 'Completed Sessions', value: completedSessions.toLocaleString(), icon: Activity, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { label: 'Active Paid Clients', value: uniqueClients.toLocaleString(), icon: Users, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     { label: 'Service Zones', value: activeZones.toLocaleString(), icon: MapPinned, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
     { label: 'Pending Vaccines', value: pendingVaccines.toLocaleString(), icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-500/10' },
   ];
@@ -79,11 +80,11 @@ export default function AdminDashboard() {
         ))}
       </div>
       <div className="p-5 bg-dark-700/50 rounded-xl border border-dark-600">
-        <p className="text-xs text-dark-400 mb-2 uppercase tracking-wider">Today's Summary</p>
-        <p className="text-dark-200 text-sm">
-          {activeVans} vans actively serving {activeZones} zones across Canada.
+        <p className="text-xs text-dark-400 mb-2 uppercase tracking-wider">Operations &amp; Revenue Overview</p>
+        <p className="text-dark-200 text-sm leading-relaxed">
+          {activeVans} vans actively serving {activeZones} zones across Edmonton and Alberta.
           {pendingVaccines > 0 && ` ${pendingVaccines} vaccine records pending review.`}
-          Average ${totalSessions > 0 ? (totalRevenue / totalSessions).toFixed(2) : '0.00'} per session.
+          {' '}Total paid bookings amount to <strong className="text-emerald-300">${totalRevenue.toFixed(2)} CAD</strong> across {paidBookings.length} paid session{paidBookings.length === 1 ? '' : 's'}.
         </p>
       </div>
     </div>

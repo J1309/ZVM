@@ -29,18 +29,18 @@ export default function AdminReports() {
     );
   }
 
-  const completed = bookings.filter(b => b.status === 'completed');
+  const paidBookings = bookings.filter(b => b.status === 'scheduled' || b.status === 'completed');
   const cancelled = bookings.filter(b => b.status === 'cancelled');
-  const totalRevenue = completed.reduce((sum, b) => sum + b.sessionFee + b.surcharge, 0);
-  const baseRevenue = completed.reduce((sum, b) => sum + b.sessionFee, 0);
-  const totalSurcharges = completed.reduce((sum, b) => sum + b.surcharge, 0);
+  const totalRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
+  const baseRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee, 0);
+  const totalSurcharges = paidBookings.reduce((sum, b) => sum + (b.surcharge || 0), 0);
   const gst = totalRevenue * 0.05;
   const hst = totalRevenue * 0.13;
 
   const sessionsByVan = vans.map(van => ({
     name: van.name,
-    sessions: completed.filter(b => b.vanId === van.id).length,
-    revenue: completed.filter(b => b.vanId === van.id).reduce((s, b) => s + b.sessionFee + b.surcharge, 0),
+    sessions: paidBookings.filter(b => b.vanId === van.id).length,
+    revenue: paidBookings.filter(b => b.vanId === van.id).reduce((s, b) => s + b.sessionFee + (b.surcharge || 0), 0),
   }));
 
   const handleExport = () => {
@@ -76,7 +76,7 @@ export default function AdminReports() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-display font-bold text-white">Financial Reports</h2>
-          <p className="text-dark-300 text-sm mt-1">{completed.length} completed sessions · {cancelled.length} cancelled</p>
+          <p className="text-dark-300 text-sm mt-1">{paidBookings.length} paid sessions · {cancelled.length} cancelled</p>
         </div>
         <motion.button
           whileTap={{ scale: 0.97 }}
@@ -89,9 +89,9 @@ export default function AdminReports() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-400' },
-          { label: 'Completed Sessions', value: completed.length.toLocaleString(), icon: Calendar, color: 'text-brand-400' },
-          { label: 'Avg. per Session', value: `$${(totalRevenue / (completed.length || 1)).toFixed(2)}`, icon: TrendingUp, color: 'text-blue-400' },
+          { label: 'Total Paid Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-400' },
+          { label: 'Paid Sessions', value: paidBookings.length.toLocaleString(), icon: Calendar, color: 'text-brand-400' },
+          { label: 'Avg. per Session', value: `$${(totalRevenue / (paidBookings.length || 1)).toFixed(2)}`, icon: TrendingUp, color: 'text-blue-400' },
         ].map((stat) => (
           <div key={stat.label} className="p-4 bg-dark-700/50 rounded-xl border border-dark-600">
             <div className={`${stat.color} mb-1`}><stat.icon className="w-4 h-4" /></div>
