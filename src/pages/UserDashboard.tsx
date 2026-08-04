@@ -4,8 +4,7 @@ import { motion } from 'framer-motion';
 import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
-import { DailySession } from '../lib/operatingHours';
-import { createCheckoutSession, STRIPE_PLANS, StripePlanKey } from '../lib/payments';
+import { createCheckoutSession, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
 import PickupWindowPicker from '../components/PickupWindowPicker';
 import { addVaccine } from '../lib/repositories/vaccineRepository';
 
@@ -31,7 +30,8 @@ export default function UserDashboard() {
   });
 
   const [selectedPlan, setSelectedPlan] = useState<StripePlanKey>('trial_run');
-  const [selectedBooking, setSelectedBooking] = useState<{ session: DailySession; dateStr: string } | null>(null);
+  const [pickedSessions, setPickedSessions] = useState<SessionPick[]>([]);
+  const [sessionsConfirmed, setSessionsConfirmed] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<StripePlanKey | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
@@ -143,9 +143,24 @@ export default function UserDashboard() {
     setShowDogForm(false);
   };
 
+  const currentPlan = STRIPE_PLANS.find(p => p.key === selectedPlan)!;
+  const requiredCount = currentPlan.sessionsCount;
+
+  // Switching plans changes how many sessions are required, so clear picks.
+  const changePlan = (key: StripePlanKey) => {
+    setSelectedPlan(key);
+    setPickedSessions([]);
+    setSessionsConfirmed(false);
+    setCheckoutError('');
+  };
+
+  const confirmSessions = () => {
+    if (pickedSessions.length === requiredCount) setSessionsConfirmed(true);
+  };
+
   const startCheckout = async () => {
-    if (!selectedBooking) {
-      setCheckoutError('Choose a session date and time before checkout.');
+    if (!sessionsConfirmed || pickedSessions.length !== requiredCount) {
+      setCheckoutError('Confirm your sessions before checkout.');
       return;
     }
     if (!user.legalAccepted || user.legalVersion !== CURRENT_LEGAL_VERSION) {
@@ -155,13 +170,9 @@ export default function UserDashboard() {
     setCheckoutPlan(selectedPlan);
     setCheckoutError('');
     try {
-      // The server reserves the slot (rejecting double-bookings) before
-      // returning the Stripe URL; the webhook confirms it on payment.
-      const session = await createCheckoutSession(
-        selectedPlan,
-        selectedBooking.dateStr,
-        selectedBooking.session.displayTime,
-      );
+      // The server reserves every session (rejecting double-bookings) before
+      // returning the Stripe URL; the webhook confirms them on payment.
+      const session = await createCheckoutSession(selectedPlan, pickedSessions);
       window.location.assign(session.url);
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : 'Checkout could not be started.');
@@ -378,24 +389,106 @@ export default function UserDashboard() {
           </div>
         </motion.div>
 
-        {/* Step 1 — Choose a session date & time */}
+        {/* Step 1 — Choose your plan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-8"
+          className="mt-8 p-5 bg-dark-800/60 rounded-2xl border border-dark-600"
         >
           <div className="mb-3 flex items-center gap-2.5">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">1</span>
-            <h2 className="font-display text-lg font-bold text-white">Choose your session</h2>
+            <h2 className="font-display text-lg font-bold text-white">Choose your plan</h2>
           </div>
-          <PickupWindowPicker
-            userFsa={user.address.postalCode?.slice(0, 3) || 'T5H'}
-            onSelectSlot={setSelectedBooking}
-          />
+          <select
+            value={selectedPlan}
+            onChange={event => changePlan(event.target.value as StripePlanKey)}
+            disabled={sessionsConfirmed}
+            className="h-11 w-full rounded-xl border border-dark-500 bg-dark-900 px-4 text-sm text-white focus:outline-none focus:border-brand-500/50 disabled:opacity-60"
+          >
+            {STRIPE_PLANS.map(plan => (
+              <option key={plan.key} value={plan.key}>
+                {plan.name} — ${plan.price} CAD, {plan.sessionsCount} session{plan.sessionsCount === 1 ? '' : 's'}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-dark-400">
+            Pick <span className="font-semibold text-dark-200">{requiredCount}</span> session date{requiredCount === 1 ? '' : 's'} for this plan below.
+          </p>
         </motion.div>
 
-        {/* Step 2 — Pay for your plan */}
+        {/* Step 2 — Pick & confirm your sessions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.28 }}
+          className="mt-6"
+        >
+          <div className="mb-3 flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">2</span>
+            <h2 className="font-display text-lg font-bold text-white">Pick &amp; confirm your sessions</h2>
+          </div>
+
+          {!sessionsConfirmed && (
+            <PickupWindowPicker
+              userFsa={user.address.postalCode?.slice(0, 3) || 'T5H'}
+              requiredCount={requiredCount}
+              picked={pickedSessions}
+              onChange={setPickedSessions}
+            />
+          )}
+
+          {/* Running summary of picks */}
+          <div className="mt-4 rounded-2xl border border-dark-600 bg-dark-800/60 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">
+                {sessionsConfirmed ? 'Confirmed sessions' : `${pickedSessions.length} of ${requiredCount} selected`}
+              </p>
+              {sessionsConfirmed && (
+                <button onClick={() => setSessionsConfirmed(false)} className="text-xs font-semibold text-brand-400 hover:underline">
+                  Edit dates
+                </button>
+              )}
+            </div>
+            {pickedSessions.length === 0 ? (
+              <p className="text-xs text-dark-400">No sessions picked yet. Choose {requiredCount} above.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {[...pickedSessions].sort((a, b) => a.date.localeCompare(b.date)).map((s) => (
+                  <div key={`${s.date}-${s.timeSlot}`} className="flex items-center justify-between gap-2 rounded-lg bg-dark-900/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs text-dark-100">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span className="font-medium">{s.date}</span>
+                      <span className="text-dark-400">·</span>
+                      <span>{s.timeSlot}</span>
+                    </span>
+                    {!sessionsConfirmed && (
+                      <button
+                        onClick={() => setPickedSessions(pickedSessions.filter(p => !(p.date === s.date && p.timeSlot === s.timeSlot)))}
+                        className="p-1 text-dark-400 hover:text-red-400 transition-colors"
+                        aria-label="Remove session"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {!sessionsConfirmed && (
+              <button
+                onClick={confirmSessions}
+                disabled={pickedSessions.length !== requiredCount}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-40"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Confirm My Sessions
+              </button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Step 3 — Pay for your plan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -403,7 +496,7 @@ export default function UserDashboard() {
           className="mt-6 p-5 bg-brand-500/5 rounded-xl border border-brand-500/20"
         >
           <div className="mb-4 flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">2</span>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">3</span>
             <h2 className="font-display text-lg font-bold text-white">Pay for your plan</h2>
           </div>
           {checkoutStatus === 'success' && (
@@ -445,39 +538,24 @@ export default function UserDashboard() {
               </button>
             </div>
           )}
-          {selectedBooking ? (
+          {sessionsConfirmed ? (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-              <span>
-                Selected session: <span className="font-semibold">{selectedBooking.session.displayTime}</span> ({selectedBooking.session.label}) on {selectedBooking.dateStr}
-              </span>
+              <span>{currentPlan.name} — {requiredCount} session{requiredCount === 1 ? '' : 's'} confirmed, total ${currentPlan.price} CAD.</span>
             </div>
           ) : (
             <p className="mb-4 rounded-xl border border-dark-600 bg-dark-800/50 px-4 py-3 text-sm text-dark-300">
-              Pick a session above to continue to payment.
+              Confirm your sessions above to continue to payment.
             </p>
           )}
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <select
-              value={selectedPlan}
-              onChange={event => setSelectedPlan(event.target.value as StripePlanKey)}
-              className="h-11 rounded-xl border border-dark-500 bg-dark-900 px-4 text-sm text-white focus:outline-none focus:border-brand-500/50"
-            >
-              {STRIPE_PLANS.map(plan => (
-                <option key={plan.key} value={plan.key}>
-                  {plan.name} - ${plan.price} CAD, {plan.summary}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={startCheckout}
-              disabled={checkoutPlan !== null || !hasCurrentConsent || !hasDog || !selectedBooking}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:from-brand-500 hover:to-brand-400 disabled:opacity-60"
-            >
-              {checkoutPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-              Pay with Stripe
-            </button>
-          </div>
+          <button
+            onClick={startCheckout}
+            disabled={checkoutPlan !== null || !hasCurrentConsent || !hasDog || !sessionsConfirmed}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:from-brand-500 hover:to-brand-400 disabled:opacity-60"
+          >
+            {checkoutPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+            Pay ${currentPlan.price} with Stripe
+          </button>
           {checkoutError && <p className="mt-3 text-sm text-red-300">{checkoutError}</p>}
         </motion.div>
       </div>

@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Clock, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
-import { DAILY_SESSIONS, DailySession, isSlotBlocked } from '../lib/operatingHours';
+import { ChevronLeft, ChevronRight, Clock, MapPin, Calendar, Check } from 'lucide-react';
+import { DAILY_SESSIONS, isSlotBlocked } from '../lib/operatingHours';
 import { getTakenSlots } from '../lib/repositories/bookingRepository';
+import { SessionPick } from '../lib/payments';
 import { Skeleton } from './Skeleton';
 
 interface PickupWindowPickerProps {
   userFsa?: string;
-  onSelectSlot?: (selection: { session: DailySession; dateStr: string } | null) => void;
-  readOnly?: boolean;
+  requiredCount: number;
+  picked: SessionPick[];
+  onChange: (picked: SessionPick[]) => void;
+  disabled?: boolean;
 }
 
 interface PickerDate {
@@ -17,7 +20,7 @@ interface PickerDate {
   fullDate: string;
 }
 
-// Rolling window of upcoming calendar dates, starting today. Every date is
+// Rolling one-month window of upcoming dates, starting today. Every date is
 // selectable — the admin assigns a van/handler to each booking afterwards.
 function upcomingDates(count: number): PickerDate[] {
   const base = new Date();
@@ -37,22 +40,24 @@ function upcomingDates(count: number): PickerDate[] {
 
 export default function PickupWindowPicker({
   userFsa = 'T5H',
-  onSelectSlot,
-  readOnly = false,
+  requiredCount,
+  picked,
+  onChange,
+  disabled = false,
 }: PickupWindowPickerProps) {
-  const dates = useMemo(() => upcomingDates(14), []);
+  const dates = useMemo(() => upcomingDates(30), []);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedDateObj = dates[selectedDayIndex];
+  const pickedDates = useMemo(() => new Set(picked.map(p => p.date)), [picked]);
 
+  // Refetch other customers' held slots whenever the viewed day changes. Picks
+  // persist across navigation — only the availability lookup is per-day.
   useEffect(() => {
     let active = true;
     setIsLoading(true);
-    setSelectedSlotId(null);
-    onSelectSlot?.(null);
     getTakenSlots(selectedDateObj.fullDate)
       .then(taken => { if (active) setTakenSlots(taken); })
       .catch(() => { if (active) setTakenSlots([]); })
@@ -61,69 +66,93 @@ export default function PickupWindowPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayIndex]);
 
+  const dayPick = picked.find(p => p.date === selectedDateObj.fullDate);
+  const isFull = picked.length >= requiredCount;
+
   const slots = DAILY_SESSIONS.map((session) => {
     const override = isSlotBlocked(selectedDateObj.fullDate, session.id);
+    const isBlocked = override.blocked;
     const isBooked = takenSlots.includes(session.displayTime);
-    return {
-      session,
-      available: !override.blocked && !isBooked,
-      isBlocked: override.blocked,
-      isBooked,
-      blockedReason: override.reason,
-    };
+    const isPicked = dayPick?.timeSlot === session.displayTime;
+    const dayHasOtherPick = !!dayPick && !isPicked;
+    const planFull = isFull && !isPicked;
+    const selectable = !disabled && !isBlocked && !isBooked && !dayHasOtherPick && !planFull;
+    return { session, isBlocked, isBooked, isPicked, dayHasOtherPick, planFull, selectable, blockedReason: override.reason };
   });
+
+  const toggle = (timeSlot: string, isPicked: boolean, selectable: boolean) => {
+    if (disabled) return;
+    if (isPicked) {
+      onChange(picked.filter(p => !(p.date === selectedDateObj.fullDate && p.timeSlot === timeSlot)));
+    } else if (selectable) {
+      onChange([...picked, { date: selectedDateObj.fullDate, timeSlot }]);
+    }
+  };
 
   return (
     <div className="friendly-card rounded-3xl border border-[#D6E6FF] bg-white p-5 shadow-xl shadow-black/5 sm:p-7">
       <div className="border-b border-[#D6E6FF] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-display text-xl font-bold text-[#071A3D]">Choose Your Session</h3>
+            <h3 className="font-display text-xl font-bold text-[#071A3D]">Choose Your Sessions</h3>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[#315B96]">
               <MapPin className="h-4 w-4 text-brand-500" />
               Service area <span className="font-bold">{userFsa}</span>
             </p>
           </div>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => setSelectedDayIndex((prev) => Math.max(0, prev - 1))}
-              disabled={selectedDayIndex === 0}
-              className="rounded-xl border border-[#D6E6FF] bg-white p-2 text-[#315B96] transition hover:bg-[#EAF2FF] disabled:opacity-40"
-              aria-label="Previous day"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedDayIndex((prev) => Math.min(dates.length - 1, prev + 1))}
-              disabled={selectedDayIndex === dates.length - 1}
-              className="rounded-xl border border-[#D6E6FF] bg-white p-2 text-[#315B96] transition hover:bg-[#EAF2FF] disabled:opacity-40"
-              aria-label="Next day"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+          <div className="flex items-center gap-3">
+            <span className={`rounded-full px-3 py-1 text-xs font-black ${isFull ? 'bg-green-100 text-green-700' : 'bg-[#EAF2FF] text-[#0F3D91]'}`}>
+              {picked.length} / {requiredCount} picked
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setSelectedDayIndex((prev) => Math.max(0, prev - 1))}
+                disabled={selectedDayIndex === 0}
+                className="rounded-xl border border-[#D6E6FF] bg-white p-2 text-[#315B96] transition hover:bg-[#EAF2FF] disabled:opacity-40"
+                aria-label="Previous day"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDayIndex((prev) => Math.min(dates.length - 1, prev + 1))}
+                disabled={selectedDayIndex === dates.length - 1}
+                className="rounded-xl border border-[#D6E6FF] bg-white p-2 text-[#315B96] transition hover:bg-[#EAF2FF] disabled:opacity-40"
+                aria-label="Next day"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Date Selector — every upcoming date is selectable */}
+      {/* Date Selector — a picked date shows a dot. Every date is selectable. */}
       <div className="grid grid-cols-7 gap-1 border-b border-[#D6E6FF] py-3">
-        {dates.map((item, index) => (
-          <button
-            key={item.fullDate}
-            type="button"
-            onClick={() => setSelectedDayIndex(index)}
-            className={`flex flex-col items-center rounded-xl py-2 transition ${
-              selectedDayIndex === index
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                : 'text-[#071A3D] hover:bg-[#EAF2FF]'
-            }`}
-          >
-            <span className="text-[10px] font-bold uppercase">{item.day}</span>
-            <span className="mt-0.5 text-sm font-black">{item.dateNum}</span>
-          </button>
-        ))}
+        {dates.map((item, index) => {
+          const hasPick = pickedDates.has(item.fullDate);
+          return (
+            <button
+              key={item.fullDate}
+              type="button"
+              onClick={() => setSelectedDayIndex(index)}
+              className={`relative flex flex-col items-center rounded-xl py-2 transition ${
+                selectedDayIndex === index
+                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
+                  : hasPick
+                    ? 'bg-brand-50 text-[#071A3D]'
+                    : 'text-[#071A3D] hover:bg-[#EAF2FF]'
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase">{item.day}</span>
+              <span className="mt-0.5 text-sm font-black">{item.dateNum}</span>
+              {hasPick && (
+                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${selectedDayIndex === index ? 'bg-white' : 'bg-brand-500'}`} />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Sessions Slots List */}
@@ -134,7 +163,7 @@ export default function PickupWindowPicker({
             7 Daily Sessions (9:00 AM – 4:00 PM)
           </span>
           <span className="text-[11px] font-semibold text-[#059669]">
-            30 min workout + 30 min buffer
+            One session per day
           </span>
         </div>
 
@@ -146,54 +175,56 @@ export default function PickupWindowPicker({
           </div>
         ) : (
           slots.map((item) => {
-            const isSelected = selectedSlotId === item.session.id;
-
+            const label = item.isBlocked
+              ? `Unavailable: ${item.blockedReason}`
+              : item.isBooked
+                ? 'Booked'
+                : item.isPicked
+                  ? 'Selected'
+                  : item.dayHasOtherPick
+                    ? 'Another slot chosen'
+                    : item.planFull
+                      ? 'Plan full'
+                      : 'Open';
             return (
               <motion.button
                 key={item.session.id}
                 type="button"
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                disabled={!item.available || readOnly}
-                onClick={() => {
-                  if (readOnly) return;
-                  setSelectedSlotId(item.session.id);
-                  onSelectSlot?.({ session: item.session, dateStr: selectedDateObj.fullDate });
-                }}
+                disabled={!item.isPicked && !item.selectable}
+                onClick={() => toggle(item.session.displayTime, item.isPicked, item.selectable)}
                 className={`w-full rounded-2xl border p-3 text-left transition ${
-                  isSelected
+                  item.isPicked
                     ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
                     : item.isBlocked
                       ? 'cursor-not-allowed border-red-200 bg-red-50 text-red-800'
-                      : item.isBooked
-                        ? 'cursor-not-allowed border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8]'
-                        : 'border-[#D6E6FF] bg-white text-[#071A3D] hover:border-brand-300'
+                      : item.selectable
+                        ? 'border-[#D6E6FF] bg-white text-[#071A3D] hover:border-brand-300'
+                        : 'cursor-not-allowed border-[#E2E8F0] bg-[#F8FAFC] text-[#94A3B8]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Clock className={`h-4 w-4 ${isSelected ? 'text-brand-600' : item.isBlocked ? 'text-red-500' : item.isBooked ? 'text-[#94A3B8]' : 'text-brand-500'}`} />
+                    <Clock className={`h-4 w-4 ${item.isPicked ? 'text-brand-600' : item.isBlocked ? 'text-red-500' : item.selectable ? 'text-brand-500' : 'text-[#94A3B8]'}`} />
                     <div>
                       <span className="text-sm font-bold">{item.session.displayTime}</span>
                       <span className="ml-2 text-xs font-medium text-[#64748B]">({item.session.label})</span>
                     </div>
                   </div>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${
-                      isSelected
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${
+                      item.isPicked
                         ? 'bg-brand-500 text-white'
                         : item.isBlocked
                           ? 'bg-red-100 text-red-800 border border-red-200'
-                          : item.isBooked
-                            ? 'bg-[#E2E8F0] text-[#64748B]'
-                            : 'bg-[#EAF2FF] text-[#0F3D91]'
+                          : item.selectable
+                            ? 'bg-[#EAF2FF] text-[#0F3D91]'
+                            : 'bg-[#E2E8F0] text-[#64748B]'
                     }`}
                   >
-                    {item.isBlocked
-                      ? `Unavailable: ${item.blockedReason}`
-                      : item.isBooked
-                        ? 'Booked'
-                        : isSelected ? 'Selected' : 'Open'}
+                    {item.isPicked && <Check className="h-3 w-3" />}
+                    {label}
                   </span>
                 </div>
               </motion.button>
@@ -201,15 +232,6 @@ export default function PickupWindowPicker({
           })
         )}
       </div>
-
-      {selectedSlotId && (
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-green-50 p-3 text-xs font-bold text-green-800 border border-green-200">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            Slot Selected: {DAILY_SESSIONS.find((s) => s.id === selectedSlotId)?.displayTime} on {selectedDateObj.day} ({selectedDateObj.fullDate})
-          </span>
-        </div>
-      )}
     </div>
   );
 }

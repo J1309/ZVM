@@ -109,9 +109,8 @@ export default defineSchema({
 
   payments: defineTable({
     userId: v.optional(v.id("users")),
-    bookingId: v.optional(v.id("bookings")),
-    sessionDate: v.optional(v.string()),
-    sessionTimeSlot: v.optional(v.string()),
+    bookingIds: v.optional(v.array(v.id("bookings"))),
+    sessions: v.optional(v.array(v.object({ date: v.string(), timeSlot: v.string() }))),
     stripeCheckoutSessionId: v.string(),
     stripePaymentIntentId: v.optional(v.string()),
     planKey: v.string(),

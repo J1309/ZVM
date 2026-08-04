@@ -13,10 +13,10 @@ const planKey = v.union(
 );
 
 const plans = {
-  trial_run: { name: "Trial Run", amountCents: 7000, priceEnv: "STRIPE_PRICE_TRIAL_RUN" },
-  package_1: { name: "Package 1", amountCents: 11000, priceEnv: "STRIPE_PRICE_PACKAGE_1" },
-  package_2: { name: "Package 2", amountCents: 20000, priceEnv: "STRIPE_PRICE_PACKAGE_2" },
-  single_run: { name: "Single Run", amountCents: 3500, priceEnv: "STRIPE_PRICE_SINGLE_RUN" },
+  trial_run: { name: "Trial Run", amountCents: 7000, sessionsCount: 2, priceEnv: "STRIPE_PRICE_TRIAL_RUN" },
+  package_1: { name: "Package 1", amountCents: 11000, sessionsCount: 3, priceEnv: "STRIPE_PRICE_PACKAGE_1" },
+  package_2: { name: "Package 2", amountCents: 20000, sessionsCount: 6, priceEnv: "STRIPE_PRICE_PACKAGE_2" },
+  single_run: { name: "Single Run", amountCents: 3500, sessionsCount: 1, priceEnv: "STRIPE_PRICE_SINGLE_RUN" },
 } as const;
 
 function siteUrl(origin: string) {
@@ -67,9 +67,8 @@ export const getCheckoutUser = internalQuery({
 export const recordCheckoutSession = internalMutation({
   args: {
     userId: v.id("users"),
-    bookingId: v.id("bookings"),
-    sessionDate: v.string(),
-    sessionTimeSlot: v.string(),
+    bookingIds: v.array(v.id("bookings")),
+    sessions: v.array(v.object({ date: v.string(), timeSlot: v.string() })),
     stripeCheckoutSessionId: v.string(),
     planKey,
     planName: v.string(),
@@ -123,12 +122,14 @@ export const markCheckoutSession = internalMutation({
       updatedAt: Date.now(),
     });
 
-    // Payment did not complete (or was refunded): release the held slot so
-    // it becomes bookable again. Paid reservations stay 'scheduled'.
-    if (args.status !== "paid" && payment.bookingId) {
-      const booking = await ctx.db.get(payment.bookingId);
-      if (booking && booking.status === "scheduled") {
-        await ctx.db.patch(payment.bookingId, { status: "cancelled", updatedAt: Date.now() });
+    // Payment did not complete (or was refunded): release every held slot so
+    // they become bookable again. Paid reservations stay 'scheduled'.
+    if (args.status !== "paid" && payment.bookingIds) {
+      for (const bookingId of payment.bookingIds) {
+        const booking = await ctx.db.get(bookingId);
+        if (booking && booking.status === "scheduled") {
+          await ctx.db.patch(bookingId, { status: "cancelled", updatedAt: Date.now() });
+        }
       }
     }
   },
@@ -138,8 +139,7 @@ export const createCheckoutSession = action({
   args: {
     planKey,
     origin: v.string(),
-    date: v.string(),
-    timeSlot: v.string(),
+    sessions: v.array(v.object({ date: v.string(), timeSlot: v.string() })),
   },
   handler: async (ctx, args): Promise<{ url: string; checkoutSessionId: string }> => {
     const identity = await requireIdentity(ctx);
@@ -150,6 +150,11 @@ export const createCheckoutSession = action({
     const priceId = process.env[plan.priceEnv];
     if (!priceId) throw new Error(`Missing ${plan.priceEnv}.`);
 
+    // The plan dictates exactly how many sessions must be picked.
+    if (args.sessions.length !== plan.sessionsCount) {
+      throw new Error(`${plan.name} requires ${plan.sessionsCount} session${plan.sessionsCount === 1 ? "" : "s"}.`);
+    }
+
     const user = await ctx.runQuery(internal.payments.getCheckoutUser, {
       authProviderUserId: identity.subject,
     });
@@ -159,15 +164,14 @@ export const createCheckoutSession = action({
     }
     if (!user.dogName) throw new Error("Complete your dog profile before checkout.");
 
-    // Reserve the slot BEFORE creating the Stripe session — this atomically
+    // Reserve all sessions BEFORE creating the Stripe session — this atomically
     // rejects a double-booking. The webhook later confirms (on paid) or the
-    // reservation is released (on failure/expiry).
-    const bookingId = await ctx.runMutation(internal.bookings.reserve, {
+    // reservations are released (on failure/expiry).
+    const bookingIds = await ctx.runMutation(internal.bookings.reserveMany, {
       userId: user.id,
-      date: args.date,
-      timeSlot: args.timeSlot,
+      sessions: args.sessions,
       planName: plan.name,
-      sessionFee: plan.amountCents / 100,
+      totalAmountCents: plan.amountCents,
       surcharge: 0,
     });
 
@@ -184,8 +188,7 @@ export const createCheckoutSession = action({
       body.set("metadata[userId]", user.id);
       body.set("metadata[planKey]", args.planKey);
       body.set("metadata[planName]", plan.name);
-      body.set("metadata[sessionDate]", args.date);
-      body.set("metadata[sessionTimeSlot]", args.timeSlot);
+      body.set("metadata[sessions]", args.sessions.map(s => `${s.date} ${s.timeSlot}`).join("; "));
 
       const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
         method: "POST",
@@ -202,9 +205,8 @@ export const createCheckoutSession = action({
 
       await ctx.runMutation(internal.payments.recordCheckoutSession, {
         userId: user.id,
-        bookingId,
-        sessionDate: args.date,
-        sessionTimeSlot: args.timeSlot,
+        bookingIds,
+        sessions: args.sessions,
         stripeCheckoutSessionId: session.id,
         planKey: args.planKey,
         planName: plan.name,
@@ -215,7 +217,7 @@ export const createCheckoutSession = action({
 
       return { url: session.url, checkoutSessionId: session.id };
     } catch (error) {
-      await ctx.runMutation(internal.bookings.releaseReservation, { bookingId });
+      await ctx.runMutation(internal.bookings.releaseReservations, { bookingIds });
       throw error;
     }
   },
