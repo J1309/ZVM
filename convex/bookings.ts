@@ -20,12 +20,35 @@ function bookingFromDoc(doc: any) {
 }
 
 // Active bookings hold a slot; cancelled ones release it.
+// Pending bookings expire after 15 minutes if payment is not completed.
+// Scheduled plan bookings require a verified 'paid' payment record.
 async function slotIsTaken(ctx: any, date: string, timeSlot: string) {
+  const now = Date.now();
+  const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
   const clashes = await ctx.db
     .query("bookings")
     .withIndex("by_date_slot", (q: any) => q.eq("date", date).eq("timeSlot", timeSlot))
     .collect();
-  return clashes.some((b: any) => b.status !== "cancelled");
+
+  const payments = await ctx.db.query("payments").collect();
+  const paidBookingIds = new Set<string>();
+  for (const p of payments) {
+    if (p.status === "paid" && p.bookingIds) {
+      p.bookingIds.forEach((id: any) => paidBookingIds.add(id));
+    }
+  }
+
+  return clashes.some((b: any) => {
+    if (!b.timeSlot || b.status === "cancelled") return false;
+    if (b.status === "pending_payment") {
+      return (now - b.createdAt) < FIFTEEN_MINUTES_MS;
+    }
+    if (b.status === "scheduled" && b.planName) {
+      return paidBookingIds.has(b._id);
+    }
+    return true;
+  });
 }
 
 export const list = query({
@@ -42,11 +65,61 @@ export const takenSlots = query({
   args: { date: v.string() },
   handler: async (ctx, args) => {
     await requireUser(ctx);
+    const now = Date.now();
+    const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
     const rows = await ctx.db
       .query("bookings")
       .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
-    return rows.filter(b => b.status !== "cancelled" && b.timeSlot).map(b => b.timeSlot as string);
+
+    const payments = await ctx.db.query("payments").collect();
+    const paidBookingIds = new Set<string>();
+    for (const p of payments) {
+      if (p.status === "paid" && p.bookingIds) {
+        p.bookingIds.forEach((id: any) => paidBookingIds.add(id));
+      }
+    }
+
+    const taken = rows.filter(b => {
+      if (!b.timeSlot || b.status === "cancelled") return false;
+      if (b.status === "pending_payment") {
+        return (now - b.createdAt) < FIFTEEN_MINUTES_MS;
+      }
+      if (b.status === "scheduled" && b.planName) {
+        return paidBookingIds.has(b._id);
+      }
+      return true;
+    });
+
+    return taken.map(b => b.timeSlot as string);
+  },
+});
+
+// Sweep away expired pending_payment bookings and un-paid legacy test reservations.
+export const sweepUnpaidBookings = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
+    const allBookings = await ctx.db.query("bookings").collect();
+    const allPayments = await ctx.db.query("payments").collect();
+
+    const paidBookingIds = new Set<string>();
+    for (const p of allPayments) {
+      if (p.status === "paid" && p.bookingIds) {
+        p.bookingIds.forEach((id: any) => paidBookingIds.add(id));
+      }
+    }
+
+    for (const b of allBookings) {
+      if (b.status === "pending_payment" && (now - b.createdAt > FIFTEEN_MINUTES_MS)) {
+        await ctx.db.patch(b._id, { status: "cancelled", updatedAt: now });
+      } else if (b.status === "scheduled" && b.planName && !paidBookingIds.has(b._id)) {
+        await ctx.db.patch(b._id, { status: "cancelled", updatedAt: now });
+      }
+    }
   },
 });
 
