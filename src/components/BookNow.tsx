@@ -44,11 +44,7 @@ const plans = [
   },
 ];
 
-const trustSignals = [
-  { number: '1,200+', label: 'active members' },
-  { number: '4.9/5', label: 'owner rating' },
-  { number: '15K+', label: 'sessions run' },
-];
+
 
 export default function BookNow() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
@@ -143,15 +139,6 @@ export default function BookNow() {
           <p className="mt-3 text-sm text-white/75">
             Build for health. Born to zoom.
           </p>
-
-          <div className="mt-7 flex flex-wrap justify-center gap-6">
-            {trustSignals.map((signal) => (
-              <div key={signal.label} className="text-center">
-                <p className="font-display text-2xl font-bold text-white">{signal.number}</p>
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-white/65">{signal.label}</p>
-              </div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </section>
