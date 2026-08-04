@@ -87,6 +87,26 @@ export default function PickupWindowPicker({
     return { session, isBlocked, isBooked, isPicked, dayHasOtherPick, planFull, selectable, blockedReason: override.reason };
   });
 
+  const uniqueMonths = useMemo(() => {
+    const set = new Set<string>();
+    dates.forEach(d => set.add(d.monthName));
+    return Array.from(set);
+  }, [dates]);
+
+  const handleMonthChange = (monthName: string) => {
+    const firstIndex = dates.findIndex(d => d.monthName === monthName);
+    if (firstIndex >= 0) {
+      setSelectedDayIndex(firstIndex);
+    }
+  };
+
+  const handleDirectDateChange = (fullDate: string) => {
+    const foundIndex = dates.findIndex(d => d.fullDate === fullDate);
+    if (foundIndex >= 0) {
+      setSelectedDayIndex(foundIndex);
+    }
+  };
+
   const toggle = (timeSlot: string, isPicked: boolean, selectable: boolean) => {
     if (disabled) return;
     if (isPicked) {
@@ -101,20 +121,47 @@ export default function PickupWindowPicker({
       <div className="border-b border-[#D6E6FF] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-display text-xl font-bold text-[#071A3D]">Choose Your Sessions</h3>
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-3 py-0.5 text-xs font-bold text-brand-600">
-                <Calendar className="h-3.5 w-3.5" />
-                {selectedDateObj.monthName}
-              </span>
+
+              {/* Month Dropdown Selector */}
+              <div className="relative inline-flex items-center">
+                <Calendar className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-brand-500" />
+                <select
+                  value={selectedDateObj.monthName}
+                  onChange={e => handleMonthChange(e.target.value)}
+                  className="h-8 rounded-full border border-brand-500/20 bg-brand-500/10 pl-7 pr-3 text-xs font-bold text-brand-700 hover:bg-brand-500/20 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                >
+                  {uniqueMonths.map(m => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Direct Calendar Date Picker Jump */}
+              <div className="relative inline-flex items-center">
+                <input
+                  type="date"
+                  min={dates[0].fullDate}
+                  max={dates[dates.length - 1].fullDate}
+                  value={selectedDateObj.fullDate}
+                  onChange={e => handleDirectDateChange(e.target.value)}
+                  className="h-8 rounded-full border border-[#D6E6FF] bg-[#F7FBFF] px-3 text-xs font-semibold text-[#071A3D] hover:bg-[#EAF2FF] focus:outline-none focus:ring-2 focus:ring-brand-500/40 cursor-pointer"
+                  title="Jump directly to a specific date"
+                />
+              </div>
             </div>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-[#315B96]">
+
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-[#315B96]">
               <MapPin className="h-4 w-4 text-brand-500" />
               Service area <span className="font-bold">{userFsa}</span>
               <span className="text-dark-300">·</span>
-              <span className="text-xs font-semibold text-dark-500">2-Month Availability</span>
+              <span className="text-xs font-semibold text-dark-500">2-Month Availability Window</span>
             </p>
           </div>
+
           <div className="flex items-center gap-3">
             <span className={`rounded-full px-3 py-1 text-xs font-black ${isFull ? 'bg-green-100 text-green-700' : 'bg-[#EAF2FF] text-[#0F3D91]'}`}>
               {picked.length} / {requiredCount} picked
@@ -126,6 +173,7 @@ export default function PickupWindowPicker({
                 disabled={selectedDayIndex === 0}
                 className="rounded-xl border border-[#D6E6FF] bg-white p-2 text-[#315B96] transition hover:bg-[#EAF2FF] disabled:opacity-40"
                 aria-label="Previous day"
+                title="Previous day"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -135,6 +183,7 @@ export default function PickupWindowPicker({
                 disabled={selectedDayIndex === dates.length - 1}
                 className="rounded-xl border border-[#D6E6FF] bg-white p-2 text-[#315B96] transition hover:bg-[#EAF2FF] disabled:opacity-40"
                 aria-label="Next day"
+                title="Next day"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
