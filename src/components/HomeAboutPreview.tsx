@@ -78,7 +78,7 @@ export default function HomeAboutPreview() {
 
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog-machine2.png"
+                  src="/images/dog-machine3.jpeg"
                   alt="Supervised canine workout session"
                   className="h-48 sm:h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"

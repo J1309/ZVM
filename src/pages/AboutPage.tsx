@@ -92,7 +92,7 @@ export default function AboutPage() {
 
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog-machine2.png"
+                  src="/images/dog-machine3.jpeg"
                   alt="Supervised mobile canine cardio session on slatmill"
                   className="h-64 sm:h-72 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
