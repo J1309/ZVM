@@ -49,16 +49,24 @@ export interface FleetVan {
 
 export interface Booking {
   id: string;
+  userId?: string;
   vanId: string;
   fsa: string;
   customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  address?: string;
   dogName: string;
+  dogBreed?: string;
+  dogWeight?: number;
+  dogAge?: number;
+  dogEnergy?: string;
   date: string;
   timeSlot?: string;
   planName?: string;
   sessionFee: number;
   surcharge: number;
-  status: 'completed' | 'cancelled' | 'scheduled';
+  status: 'completed' | 'cancelled' | 'scheduled' | 'pending_payment';
   createdAt: string;
 }
 

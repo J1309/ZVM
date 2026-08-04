@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Settings, MapPinned, ShieldCheck,
-  Truck, Receipt, ArrowLeft, Menu, X, LogOut, Calendar, Users,
+  Truck, Receipt, ArrowLeft, Menu, X, LogOut, Calendar, Users, CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import AdminDashboard from './admin/Dashboard';
@@ -14,11 +14,13 @@ import AdminVaccinePanel from './admin/VaccinePanel';
 import AdminFleetPanel from './admin/FleetPanel';
 import AdminReports from './admin/Reports';
 import AdminSchedulePanel from './admin/SchedulePanel';
+import AdminBookingsPanel from './admin/BookingsPanel';
 
 const tabs = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'Overview', title: 'Dashboard', subtitle: 'Real-time overview of your operations' },
+  { id: 'bookings', label: 'Bookings', icon: CalendarCheck, group: 'Operations', title: 'Customer Bookings', subtitle: 'View customer details, addresses, subscription plans & chosen dates' },
   { id: 'users', label: 'Users', icon: Users, group: 'Overview', title: 'Registered Users', subtitle: 'Accounts, profiles, and subscriptions' },
-  { id: 'schedule', label: 'Pickup Windows', icon: Calendar, group: 'Operations', title: 'Pickup Windows', subtitle: 'Daily operating sessions' },
+  { id: 'schedule', label: 'Pickup Windows', icon: Calendar, group: 'Operations', title: 'Pickup Windows', subtitle: '60-day calendar & daily operating sessions' },
   { id: 'fsa', label: 'FSA Manager', icon: MapPinned, group: 'Operations', title: 'FSA Manager', subtitle: 'Service zones and coverage' },
   { id: 'vaccines', label: 'Vaccines', icon: ShieldCheck, group: 'Operations', title: 'Vaccine Verification', subtitle: 'Review submitted records' },
   { id: 'fleet', label: 'Fleet', icon: Truck, group: 'Operations', title: 'Fleet', subtitle: 'Vans and availability' },
@@ -44,6 +46,7 @@ export default function AdminPage() {
   const renderPanel = () => {
     switch (activeTab) {
       case 'dashboard': return <AdminDashboard />;
+      case 'bookings': return <AdminBookingsPanel />;
       case 'users': return <AdminUsersPanel />;
       case 'schedule': return <AdminSchedulePanel />;
       case 'cms': return <AdminCMSPanel />;

@@ -2,23 +2,6 @@ import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import { requireAdmin, requireUser } from "./auth";
 
-function bookingFromDoc(doc: any) {
-  return {
-    id: doc._id,
-    vanId: doc.vanId ?? "",
-    fsa: doc.fsa,
-    customerName: doc.customerName,
-    dogName: doc.dogName,
-    date: doc.date,
-    timeSlot: doc.timeSlot ?? "",
-    planName: doc.planName ?? "",
-    sessionFee: doc.sessionFee,
-    surcharge: doc.surcharge,
-    status: doc.status,
-    createdAt: new Date(doc.createdAt).toISOString(),
-  };
-}
-
 // Active bookings hold a slot; cancelled ones release it.
 // Pending bookings expire after 15 minutes if payment is not completed.
 // Scheduled plan bookings require a verified 'paid' payment record.
@@ -56,7 +39,34 @@ export const list = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const bookings = await ctx.db.query("bookings").collect();
-    return bookings.map(bookingFromDoc);
+    const users = await ctx.db.query("users").collect();
+    const userMap = new Map(users.map(u => [u._id, u]));
+
+    return bookings.map(doc => {
+      const u = doc.userId ? userMap.get(doc.userId) : null;
+      return {
+        id: doc._id,
+        userId: doc.userId ?? "",
+        vanId: doc.vanId ?? "",
+        fsa: doc.fsa,
+        customerName: doc.customerName,
+        customerEmail: u?.email ?? "",
+        customerPhone: u?.phone ?? "",
+        address: u?.address ? `${u.address.line1}, ${u.address.city}, ${u.address.province} ${u.address.postalCode}` : "",
+        dogName: doc.dogName,
+        dogBreed: u?.dog?.breed ?? "",
+        dogWeight: u?.dog?.weight ?? 0,
+        dogAge: u?.dog?.age ?? 0,
+        dogEnergy: u?.dog?.energyLevel ?? "",
+        date: doc.date,
+        timeSlot: doc.timeSlot ?? "",
+        planName: doc.planName ?? "",
+        sessionFee: doc.sessionFee,
+        surcharge: doc.surcharge,
+        status: doc.status,
+        createdAt: new Date(doc.createdAt).toISOString(),
+      };
+    });
   },
 });
 
