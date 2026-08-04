@@ -19,6 +19,7 @@ const navLinks = [
   { label: 'Pricing', href: '/#book-now', page: false },
   { label: 'Coverage', href: '/coverage', page: true },
   { label: 'FAQ', href: '/faq', page: true },
+  { label: 'Contact', href: '/#contact', page: false },
 ];
 
 const navItemClass =

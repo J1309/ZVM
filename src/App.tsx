@@ -27,6 +27,7 @@ const loadHomeAboutPreview = () => import('./components/HomeAboutPreview');
 const loadHowItWorks = () => import('./components/HowItWorks');
 const loadBookNow = () => import('./components/BookNow');
 const loadCTA = () => import('./components/CTA');
+const loadContactSection = () => import('./components/ContactSection');
 const loadFooter = () => import('./components/Footer');
 
 const Hero = lazy(loadHero);
@@ -34,10 +35,11 @@ const HomeAboutPreview = lazy(loadHomeAboutPreview);
 const HowItWorks = lazy(loadHowItWorks);
 const BookNow = lazy(loadBookNow);
 const CTA = lazy(loadCTA);
+const ContactSection = lazy(loadContactSection);
 const Footer = lazy(loadFooter);
 
 const landingModules = Promise.all([
-  loadHero, loadHomeAboutPreview, loadHowItWorks, loadBookNow, loadCTA, loadFooter,
+  loadHero, loadHomeAboutPreview, loadHowItWorks, loadBookNow, loadCTA, loadContactSection, loadFooter,
 ].map((loader) => loader()));
 
 /** Detect Safari / WebKit — Lenis smooth scroll breaks scrolling on these browsers */
@@ -123,6 +125,7 @@ function LandingPage() {
           <HowItWorks />
           <BookNow />
           <CTA />
+          <ContactSection />
           <Footer />
         </motion.div>
       )}
