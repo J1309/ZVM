@@ -245,49 +245,54 @@ export default function AboutPage() {
       </section>
 
       {/* Why a slat mill */}
-      <section className="relative bg-[#F7FBFF] px-4 py-14 text-[#071A3D] sm:px-6 lg:px-8 lg:py-20">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-          <motion.div {...reveal()}>
-            <span className="mb-3 inline-flex rounded-full bg-[#FFF7ED] px-4 py-2 text-sm font-bold text-brand-700">
-              Why a slat mill?
-            </span>
-            <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl">
-              It moves when your dog moves.
-            </h2>
-            <p className="mt-5 max-w-prose text-base leading-relaxed text-[#315B96]">
-              A slat mill is a non-motorized treadmill designed for dogs. Unlike a motorized
-              treadmill, the belt is not powered by a machine. Your dog controls the movement,
-              the speed, and the stop. That makes the experience more natural and easier to
-              shape around each dog&rsquo;s comfort.
-            </p>
+      <section className="relative bg-[#F7FBFF] px-4 py-14 text-[#071A3D] sm:px-6 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-7xl">
+          {/* Top row: Text on Left, Equipment Image on Right */}
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+            <motion.div {...reveal()}>
+              <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#FFF7ED] px-4 py-2 text-sm font-bold text-brand-700">
+                <Sparkles className="h-4 w-4" />
+                Why a slat mill?
+              </span>
+              <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+                It moves when your dog moves.
+              </h2>
+              <p className="mt-5 text-base leading-relaxed text-[#315B96] sm:text-lg">
+                A slat mill is a non-motorized treadmill designed for dogs. Unlike a motorized
+                treadmill, the belt is not powered by a machine. Your dog controls the movement,
+                the speed, and the stop. That makes the experience more natural and easier to
+                shape around each dog&rsquo;s comfort.
+              </p>
+            </motion.div>
 
-            <div className="relative mt-6 overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#071A3D] shadow-xl">
+            <motion.div {...reveal(0.1)} className="relative overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#071A3D] shadow-xl">
               <img
                 src="/images/dog-machine1.png"
                 alt="Non-motorized slatmill equipment installed inside a ZoomieVan"
                 width={800}
                 height={384}
                 loading="lazy"
-                className="h-64 sm:h-72 lg:h-80 w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+                className="h-64 sm:h-72 lg:h-80 w-full object-cover object-center transition-transform duration-500 hover:scale-105"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071A3D]/70 via-transparent to-transparent" />
               <span className="absolute bottom-3 left-3 rounded-xl bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-white border border-white/20">
                 Non-Motorized Slatmill Equipment
               </span>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          {/* Bottom row: Horizontal 3-column cards for safety notes */}
+          <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">
             {safetyNotes.map(({ icon: Icon, title, text }, index) => (
               <motion.article
                 key={title}
                 {...reveal(index * 0.08)}
-                className="rounded-2xl border border-[#D6E6FF] bg-white p-5"
+                className="rounded-3xl border border-[#D6E6FF] bg-white p-6 shadow-md hover:border-brand-300 hover:shadow-xl transition-all"
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#EAF2FF] text-[#0F3D91]">
-                  <Icon className="h-5 w-5" />
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EAF2FF] text-[#0F3D91]">
+                  <Icon className="h-6 w-6" />
                 </div>
-                <h3 className="font-display text-lg font-bold">{title}</h3>
+                <h3 className="font-display text-lg font-bold text-[#071A3D]">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-[#315B96]">{text}</p>
               </motion.article>
             ))}
