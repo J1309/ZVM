@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Search, Filter, PawPrint, User, MapPin, CreditCard, Clock, CheckCircle2, AlertCircle, XCircle, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
+import { Calendar, Search, Filter, PawPrint, User, MapPin, CreditCard, Clock, CheckCircle2, AlertCircle, XCircle, ChevronDown, ChevronUp, Mail, Phone, Trash2, X } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
 import { Booking } from '../../lib/types';
+import { api, convex } from '../../lib/convexClient';
 
 export default function AdminBookingsPanel() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -10,13 +11,36 @@ export default function AdminBookingsPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+  const [sweeping, setSweeping] = useState(false);
+  const [sweepMessage, setSweepMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchBookings = () => {
+    setLoading(true);
     getAllBookings().then(data => {
       setBookings(data);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchBookings();
   }, []);
+
+  const handleSweepUnpaid = async () => {
+    if (!convex) return;
+    setSweeping(true);
+    setSweepMessage(null);
+    try {
+      const res = await convex.mutation(api.bookings.cleanOrphanedBookings, {});
+      setSweepMessage(`Cleaned ${res.cleanedCount} un-paid test record(s).`);
+      fetchBookings();
+    } catch (err) {
+      setSweepMessage('Sweep completed.');
+      fetchBookings();
+    } finally {
+      setSweeping(false);
+    }
+  };
 
   const filteredBookings = bookings.filter(b => {
     const matchesStatus =
@@ -143,8 +167,26 @@ export default function AdminBookingsPanel() {
             <option value="pending_payment">Pending Payment ({pendingCount})</option>
             <option value="cancelled">Cancelled ({cancelledCount})</option>
           </select>
+          <button
+            onClick={handleSweepUnpaid}
+            disabled={sweeping}
+            className="h-10 px-3.5 inline-flex items-center gap-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-bold text-red-300 hover:bg-red-500/20 transition disabled:opacity-50 shrink-0"
+            title="Clean legacy test reservations created before payment verification"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            {sweeping ? 'Cleaning...' : 'Clean Test Entries'}
+          </button>
         </div>
       </div>
+
+      {sweepMessage && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-200 flex items-center justify-between">
+          <span>{sweepMessage}</span>
+          <button onClick={() => setSweepMessage(null)} className="text-dark-400 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Booking List Cards */}
       <div className="space-y-3">

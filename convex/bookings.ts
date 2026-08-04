@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireUser } from "./auth";
 
 // Active bookings hold a slot; cancelled ones release it.
@@ -42,8 +42,24 @@ export const list = query({
     const users = await ctx.db.query("users").collect();
     const userMap = new Map(users.map(u => [u._id, u]));
 
+    const payments = await ctx.db.query("payments").collect();
+    const paidBookingIds = new Set<string>();
+    for (const p of payments) {
+      if (p.status === "paid" && p.bookingIds) {
+        p.bookingIds.forEach((id: any) => paidBookingIds.add(id));
+      }
+    }
+
     return bookings.map(doc => {
       const u = doc.userId ? userMap.get(doc.userId) : null;
+      let effectiveStatus = doc.status;
+
+      // If a reservation was created during checkout but payment was never completed,
+      // override its display status to 'cancelled' so Admin and users never see unpaid attempts as paid/scheduled!
+      if ((doc.status === "scheduled" || doc.status === "pending_payment") && doc.planName && !paidBookingIds.has(doc._id)) {
+        effectiveStatus = "cancelled";
+      }
+
       return {
         id: doc._id,
         userId: doc.userId ?? "",
@@ -63,10 +79,36 @@ export const list = query({
         planName: doc.planName ?? "",
         sessionFee: doc.sessionFee,
         surcharge: doc.surcharge,
-        status: doc.status,
+        status: effectiveStatus,
         createdAt: new Date(doc.createdAt).toISOString(),
       };
     });
+  },
+});
+
+export const cleanOrphanedBookings = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const now = Date.now();
+    const allBookings = await ctx.db.query("bookings").collect();
+    const allPayments = await ctx.db.query("payments").collect();
+
+    const paidBookingIds = new Set<string>();
+    for (const p of allPayments) {
+      if (p.status === "paid" && p.bookingIds) {
+        p.bookingIds.forEach((id: any) => paidBookingIds.add(id));
+      }
+    }
+
+    let cleanedCount = 0;
+    for (const b of allBookings) {
+      if ((b.status === "scheduled" || b.status === "pending_payment") && b.planName && !paidBookingIds.has(b._id)) {
+        await ctx.db.patch(b._id, { status: "cancelled", updatedAt: now });
+        cleanedCount++;
+      }
+    }
+    return { cleanedCount };
   },
 });
 
