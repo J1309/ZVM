@@ -76,15 +76,35 @@ export default function PickupWindowPicker({
   const dayPick = picked.find(p => p.date === selectedDateObj.fullDate);
   const isFull = picked.length >= requiredCount;
 
+  // Check if a session's start time has already passed today (Mountain Time — Edmonton)
+  const isSlotInPast = (sessionStartTime: string): boolean => {
+    const todayLocal = new Date();
+    // Get today's date string in Mountain Time
+    const todayMT = todayLocal.toLocaleDateString('en-CA', { timeZone: 'America/Edmonton' }); // "YYYY-MM-DD"
+    if (selectedDateObj.fullDate !== todayMT) return false; // Only applies to today
+
+    // Get the current hour and minute in Mountain Time
+    const nowParts = todayLocal.toLocaleTimeString('en-GB', { timeZone: 'America/Edmonton', hour12: false }).split(':');
+    const nowMinutes = parseInt(nowParts[0], 10) * 60 + parseInt(nowParts[1], 10);
+
+    // Parse session start time (e.g. "09:00" or "13:00")
+    const [startH, startM] = sessionStartTime.split(':').map(Number);
+    const sessionMinutes = startH * 60 + startM;
+
+    return nowMinutes >= sessionMinutes;
+  };
+
   const slots = DAILY_SESSIONS.map((session) => {
     const override = isSlotBlocked(selectedDateObj.fullDate, session.id);
-    const isBlocked = override.blocked;
+    const isPast = isSlotInPast(session.startTime);
+    const isBlocked = override.blocked || isPast;
+    const blockedReason = override.blocked ? override.reason : isPast ? 'Time has passed' : undefined;
     const isBooked = takenSlots.includes(session.displayTime);
     const isPicked = dayPick?.timeSlot === session.displayTime;
     const dayHasOtherPick = !!dayPick && !isPicked;
     const planFull = isFull && !isPicked;
     const selectable = !disabled && !isBlocked && !isBooked && !dayHasOtherPick && !planFull;
-    return { session, isBlocked, isBooked, isPicked, dayHasOtherPick, planFull, selectable, blockedReason: override.reason };
+    return { session, isBlocked, isBooked, isPicked, dayHasOtherPick, planFull, selectable, blockedReason };
   });
 
   const uniqueMonths = useMemo(() => {
