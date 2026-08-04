@@ -261,15 +261,19 @@ export default function AboutPage() {
               shape around each dog&rsquo;s comfort.
             </p>
 
-            <div className="mt-6 overflow-hidden rounded-2xl border border-[#D6E6FF] bg-[#071A3D]/5 p-2 shadow-lg sm:p-3">
+            <div className="relative mt-6 overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#071A3D] shadow-xl">
               <img
                 src="/images/dog-machine1.png"
                 alt="Non-motorized slatmill equipment installed inside a ZoomieVan"
                 width={800}
                 height={384}
                 loading="lazy"
-                className="h-auto max-h-[380px] w-full rounded-xl object-contain"
+                className="h-64 sm:h-72 lg:h-80 w-full object-cover object-top transition-transform duration-500 hover:scale-105"
               />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071A3D]/70 via-transparent to-transparent" />
+              <span className="absolute bottom-3 left-3 rounded-xl bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-white border border-white/20">
+                Non-Motorized Slatmill Equipment
+              </span>
             </div>
           </motion.div>
 

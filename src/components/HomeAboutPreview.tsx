@@ -67,7 +67,7 @@ export default function HomeAboutPreview() {
                 <img
                   src="/images/dog-machine1.png"
                   alt="A dog using a non-motorized slat mill inside ZoomieVan"
-                  className="h-48 sm:h-56 w-full object-contain bg-[#071A3D] p-1.5 transition-transform duration-500 group-hover:scale-105"
+                  className="h-48 sm:h-56 w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
