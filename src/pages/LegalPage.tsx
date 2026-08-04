@@ -62,7 +62,7 @@ const pages = {
     title: 'Support',
     updated: 'Launch contact placeholder',
     sections: [
-      ['Contact', 'Email hello@zoomievan.ca for account, booking, privacy, and safety requests.'],
+      ['Contact', 'Email support@zoomievaninc.com or call +1 (587) 568-4967 for account, booking, privacy, and safety requests.'],
       ['Response ownership', 'Assign a monitored support owner and response target before public launch.'],
       ['Urgent safety issues', 'Create an incident escalation path for service, animal safety, privacy, and payment issues before production launch.'],
     ],

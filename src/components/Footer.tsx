@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { MapPin, Mail, Phone, Globe, MessageCircle, Camera } from 'lucide-react';
+import { MapPin, Mail, Phone, Camera } from 'lucide-react';
 
 const footerLinks = {
   Service: [
@@ -53,24 +53,37 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-brand-500" />
-                <span>hello@zoomievan.ca</span>
+                <a href="mailto:support@zoomievaninc.com" className="hover:text-white transition-colors">support@zoomievaninc.com</a>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-brand-500" />
-                <span>1-888-PAW-POWR</span>
+                <a href="tel:+15875684967" className="hover:text-white transition-colors">+1 (587) 568-4967</a>
               </div>
             </div>
             <div className="flex gap-3">
-              {[Camera, Globe, MessageCircle].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="mailto:hello@zoomievan.ca"
-                  aria-label="Contact ZoomieVan"
-                  className="w-10 h-10 rounded-xl bg-dark-700 border border-dark-500 flex items-center justify-center text-dark-300 hover:text-brand-400 hover:border-brand-500/30 transition-all"
-                >
-                  <Icon className="w-4 h-4" />
-                </a>
-              ))}
+              <a
+                href="https://www.instagram.com/zoomie.van?utm_source=qr"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="ZoomieVan Instagram"
+                className="w-10 h-10 rounded-xl bg-dark-700 border border-dark-500 flex items-center justify-center text-dark-300 hover:text-brand-400 hover:border-brand-500/30 transition-all"
+              >
+                <Camera className="w-4 h-4" />
+              </a>
+              <a
+                href="mailto:support@zoomievaninc.com"
+                aria-label="Email ZoomieVan Support"
+                className="w-10 h-10 rounded-xl bg-dark-700 border border-dark-500 flex items-center justify-center text-dark-300 hover:text-brand-400 hover:border-brand-500/30 transition-all"
+              >
+                <Mail className="w-4 h-4" />
+              </a>
+              <a
+                href="tel:+15875684967"
+                aria-label="Call ZoomieVan"
+                className="w-10 h-10 rounded-xl bg-dark-700 border border-dark-500 flex items-center justify-center text-dark-300 hover:text-brand-400 hover:border-brand-500/30 transition-all"
+              >
+                <Phone className="w-4 h-4" />
+              </a>
             </div>
           </div>
 

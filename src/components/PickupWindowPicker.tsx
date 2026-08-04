@@ -18,11 +18,12 @@ interface PickerDate {
   day: string;
   dateNum: number;
   fullDate: string;
+  monthName: string;
+  shortMonth: string;
 }
 
-// Rolling one-month window of upcoming dates, starting today. Every date is
-// selectable — the admin assigns a van/handler to each booking afterwards.
-function upcomingDates(count: number): PickerDate[] {
+// Rolling two-month (60-day) window of upcoming dates, starting today.
+function upcomingDates(count: number = 60): PickerDate[] {
   const base = new Date();
   base.setHours(0, 0, 0, 0);
   return Array.from({ length: count }, (_, i) => {
@@ -34,6 +35,8 @@ function upcomingDates(count: number): PickerDate[] {
       day: d.toLocaleDateString(undefined, { weekday: 'short' }),
       dateNum: d.getDate(),
       fullDate: `${y}-${m}-${dd}`,
+      monthName: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      shortMonth: d.toLocaleDateString(undefined, { month: 'short' }),
     };
   });
 }
@@ -45,13 +48,17 @@ export default function PickupWindowPicker({
   onChange,
   disabled = false,
 }: PickupWindowPickerProps) {
-  const dates = useMemo(() => upcomingDates(30), []);
+  const dates = useMemo(() => upcomingDates(60), []);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedDateObj = dates[selectedDayIndex];
   const pickedDates = useMemo(() => new Set(picked.map(p => p.date)), [picked]);
+
+  // Window of visible dates (scroll through 60 days in pages of 7)
+  const visibleStartIndex = Math.floor(selectedDayIndex / 7) * 7;
+  const visibleDates = dates.slice(visibleStartIndex, visibleStartIndex + 7);
 
   // Refetch other customers' held slots whenever the viewed day changes. Picks
   // persist across navigation — only the availability lookup is per-day.
@@ -94,10 +101,18 @@ export default function PickupWindowPicker({
       <div className="border-b border-[#D6E6FF] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-display text-xl font-bold text-[#071A3D]">Choose Your Sessions</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display text-xl font-bold text-[#071A3D]">Choose Your Sessions</h3>
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-3 py-0.5 text-xs font-bold text-brand-600">
+                <Calendar className="h-3.5 w-3.5" />
+                {selectedDateObj.monthName}
+              </span>
+            </div>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[#315B96]">
               <MapPin className="h-4 w-4 text-brand-500" />
               Service area <span className="font-bold">{userFsa}</span>
+              <span className="text-dark-300">·</span>
+              <span className="text-xs font-semibold text-dark-500">2-Month Availability</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -128,27 +143,29 @@ export default function PickupWindowPicker({
         </div>
       </div>
 
-      {/* Date Selector — a picked date shows a dot. Every date is selectable. */}
+      {/* Date Selector — 2 Month timeline with Month indicator badges */}
       <div className="grid grid-cols-7 gap-1 border-b border-[#D6E6FF] py-3">
-        {dates.map((item, index) => {
+        {visibleDates.map((item) => {
+          const globalIndex = dates.findIndex(d => d.fullDate === item.fullDate);
           const hasPick = pickedDates.has(item.fullDate);
           return (
             <button
               key={item.fullDate}
               type="button"
-              onClick={() => setSelectedDayIndex(index)}
+              onClick={() => setSelectedDayIndex(globalIndex)}
               className={`relative flex flex-col items-center rounded-xl py-2 transition ${
-                selectedDayIndex === index
+                selectedDayIndex === globalIndex
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
                   : hasPick
                     ? 'bg-brand-50 text-[#071A3D]'
                     : 'text-[#071A3D] hover:bg-[#EAF2FF]'
               }`}
             >
+              <span className="text-[9px] font-extrabold uppercase tracking-tighter opacity-80">{item.shortMonth}</span>
               <span className="text-[10px] font-bold uppercase">{item.day}</span>
               <span className="mt-0.5 text-sm font-black">{item.dateNum}</span>
               {hasPick && (
-                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${selectedDayIndex === index ? 'bg-white' : 'bg-brand-500'}`} />
+                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${selectedDayIndex === globalIndex ? 'bg-white' : 'bg-brand-500'}`} />
               )}
             </button>
           );

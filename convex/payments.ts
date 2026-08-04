@@ -7,16 +7,16 @@ const LEGAL_VERSION = "2026-07-14";
 
 const planKey = v.union(
   v.literal("trial_run"),
+  v.literal("single_run"),
   v.literal("package_1"),
   v.literal("package_2"),
-  v.literal("single_run"),
 );
 
 const plans = {
   trial_run: { name: "Trial Run", amountCents: 7000, sessionsCount: 2, priceEnv: "STRIPE_PRICE_TRIAL_RUN" },
+  single_run: { name: "Single Run", amountCents: 3500, sessionsCount: 1, priceEnv: "STRIPE_PRICE_SINGLE_RUN" },
   package_1: { name: "Package 1", amountCents: 11000, sessionsCount: 3, priceEnv: "STRIPE_PRICE_PACKAGE_1" },
   package_2: { name: "Package 2", amountCents: 20000, sessionsCount: 6, priceEnv: "STRIPE_PRICE_PACKAGE_2" },
-  single_run: { name: "Single Run", amountCents: 3500, sessionsCount: 1, priceEnv: "STRIPE_PRICE_SINGLE_RUN" },
 } as const;
 
 function siteUrl(origin: string) {

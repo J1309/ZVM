@@ -16,6 +16,15 @@ const plans = [
     popular: false,
   },
   {
+    name: 'Single Run',
+    price: 35,
+    period: '1 session',
+    description: 'One 30-minute session for an extra workout, occasional exercise, or routine maintenance.',
+    features: ['1 run, 30 minutes', 'Add between packages', 'Occasional exercise option', 'Keep your dog\'s routine going'],
+    accent: 'bg-[#F7FBFF]',
+    popular: false,
+  },
+  {
     name: 'Package 1',
     price: 110,
     period: '3 runs',
@@ -32,15 +41,6 @@ const plans = [
     features: ['6 runs, 30 minutes each', 'Use anytime within one month', 'Ideal for regular conditioning', 'Best package value'],
     accent: 'bg-[#D6E6FF]',
     popular: true,
-  },
-  {
-    name: 'Single Run',
-    price: 35,
-    period: '1 session',
-    description: 'One 30-minute session for an extra workout, occasional exercise, or routine maintenance.',
-    features: ['1 run, 30 minutes', 'Add between packages', 'Occasional exercise option', 'Keep your dog\'s routine going'],
-    accent: 'bg-[#F7FBFF]',
-    popular: false,
   },
 ];
 

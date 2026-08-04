@@ -394,27 +394,72 @@ export default function UserDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-8 p-5 bg-dark-800/60 rounded-2xl border border-dark-600"
+          className="mt-8 p-6 bg-dark-800/60 rounded-3xl border border-dark-600 shadow-xl"
         >
-          <div className="mb-3 flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white">1</span>
-            <h2 className="font-display text-lg font-bold text-white">Choose your plan</h2>
+          <div className="flex flex-col items-center justify-center text-center mb-6">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white shadow-md shadow-brand-500/20 mb-2">1</span>
+            <h2 className="font-display text-2xl font-bold text-white">Choose Your Plan</h2>
+            <p className="mt-1 text-xs text-dark-300">
+              Select a fitness option below to pick your <span className="font-bold text-brand-400">{requiredCount}</span> session date{requiredCount === 1 ? '' : 's'}.
+            </p>
           </div>
-          <select
-            value={selectedPlan}
-            onChange={event => changePlan(event.target.value as StripePlanKey)}
-            disabled={sessionsConfirmed}
-            className="h-11 w-full rounded-xl border border-dark-500 bg-dark-900 px-4 text-sm text-white focus:outline-none focus:border-brand-500/50 disabled:opacity-60"
-          >
-            {STRIPE_PLANS.map(plan => (
-              <option key={plan.key} value={plan.key}>
-                {plan.name} — ${plan.price} CAD, {plan.sessionsCount} session{plan.sessionsCount === 1 ? '' : 's'}
-              </option>
-            ))}
-          </select>
-          <p className="mt-2 text-xs text-dark-400">
-            Pick <span className="font-semibold text-dark-200">{requiredCount}</span> session date{requiredCount === 1 ? '' : 's'} for this plan below.
-          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {STRIPE_PLANS.map(plan => {
+              const isSelected = selectedPlan === plan.key;
+              return (
+                <label
+                  key={plan.key}
+                  onClick={() => !sessionsConfirmed && changePlan(plan.key)}
+                  className={`relative flex flex-col justify-between rounded-2xl p-4 transition-all ${
+                    sessionsConfirmed ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                  } ${
+                    isSelected
+                      ? 'border-2 border-brand-500 bg-gradient-to-b from-brand-500/15 via-dark-800 to-dark-800 shadow-lg shadow-brand-500/10 ring-1 ring-brand-500/30'
+                      : 'border border-dark-600 bg-dark-900/60 hover:border-dark-400 hover:bg-dark-800/80'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-dark-200">{plan.name}</span>
+                      <div className="relative flex items-center justify-center">
+                        <input
+                          type="radio"
+                          name="stripe_plan"
+                          value={plan.key}
+                          checked={isSelected}
+                          disabled={sessionsConfirmed}
+                          onChange={() => changePlan(plan.key)}
+                          className="sr-only"
+                        />
+                        <div className={`h-5 w-5 rounded-full border-2 transition-all flex items-center justify-center ${
+                          isSelected ? 'border-brand-500 bg-brand-500' : 'border-dark-400 bg-dark-900'
+                        }`}>
+                          {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-2">
+                      <span className="font-display text-2xl font-black text-white">${plan.price}</span>
+                      <span className="text-[11px] font-semibold text-dark-400 ml-1">CAD</span>
+                    </div>
+
+                    <p className="text-xs text-dark-300 leading-relaxed min-h-[36px]">{plan.summary}</p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-dark-700/60 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2.5 py-1 text-[10px] font-bold text-brand-400">
+                      {plan.sessionsCount} Session{plan.sessionsCount === 1 ? '' : 's'}
+                    </span>
+                    {isSelected && (
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">Selected</span>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
         </motion.div>
 
         {/* Step 2 — Pick & confirm your sessions */}
