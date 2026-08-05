@@ -192,8 +192,20 @@ export default function AdminUsersPanel() {
                           <Detail icon={Dog} text={user.dog.name ? `${user.dog.name} · ${user.dog.breed || 'Unknown breed'} · ${user.dog.age}y` : 'No dog profile'} />
                           <div className="flex items-center gap-2 text-xs">
                             {user.legalAccepted
-                              ? <><ShieldCheck className="w-3.5 h-3.5 text-green-400" /><span className="text-dark-300">Terms accepted</span></>
-                              : <><ShieldAlert className="w-3.5 h-3.5 text-amber-400" /><span className="text-amber-300">Terms pending</span></>}
+                              ? (
+                                  <>
+                                    <ShieldCheck className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                                    <span className="text-green-300 font-medium">
+                                      Terms Accepted {user.legalAcceptedAt ? `(${new Date(user.legalAcceptedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
+                                    </span>
+                                  </>
+                                )
+                              : (
+                                  <>
+                                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span className="text-amber-300 font-medium">Terms Acceptance Pending</span>
+                                  </>
+                                )}
                           </div>
                           <p className="text-xs text-dark-500">Joined {new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                         </div>
