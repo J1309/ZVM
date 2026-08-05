@@ -65,9 +65,9 @@ export default function HomeAboutPreview() {
             <div className="grid grid-cols-2 gap-3">
               <div className="group relative overflow-hidden rounded-2xl bg-dark-900">
                 <img
-                  src="/images/dog-machine1.png"
-                  alt="A dog using a non-motorized slat mill inside ZoomieVan"
-                  className="h-48 sm:h-56 w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  src="/images/dog_mchine_final1.png"
+                  alt="Professional non-motorized slat mill equipment inside ZoomieVan"
+                  className="h-48 sm:h-56 w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />

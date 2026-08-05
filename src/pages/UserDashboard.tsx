@@ -631,23 +631,24 @@ export default function UserDashboard() {
               </button>
             </div>
             <div className="p-5 space-y-4">
+              <p className="text-xs text-brand-400 font-semibold">* Required fields</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">Name</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Dog Name <span className="text-red-400 font-bold">*</span></label>
                   <input value={dogForm.name} onChange={e => setDogForm({ ...dogForm, name: e.target.value })} placeholder="Max" className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">Breed</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Breed <span className="text-red-400 font-bold">*</span></label>
                   <input value={dogForm.breed} onChange={e => setDogForm({ ...dogForm, breed: e.target.value })} placeholder="Golden Retriever" className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">Weight (lbs)</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Weight (lbs) <span className="text-red-400 font-bold">*</span></label>
                   <input type="number" value={dogForm.weight || ''} onChange={e => setDogForm({ ...dogForm, weight: Number(e.target.value) })} placeholder="65" className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">Age (years)</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Age (years) <span className="text-red-400 font-bold">*</span></label>
                   <input type="number" value={dogForm.age || ''} onChange={e => setDogForm({ ...dogForm, age: Number(e.target.value) })} placeholder="3" className="w-full h-11 bg-dark-900 border border-dark-500 rounded-xl px-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50" />
                 </div>
               </div>
@@ -676,7 +677,7 @@ export default function UserDashboard() {
                 className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white hover:from-brand-500 hover:to-brand-400 transition-all shadow-lg shadow-brand-500/25 disabled:opacity-40 flex items-center gap-1.5"
               >
                 {savingDog ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save
+                Save Dog Profile
               </button>
             </div>
           </motion.div>
@@ -698,8 +699,9 @@ export default function UserDashboard() {
               </button>
             </div>
             <div className="p-5 space-y-4">
+              <p className="text-xs text-brand-400 font-semibold">* Required fields</p>
               <div className="space-y-1.5">
-                <label className="text-xs text-dark-400 uppercase tracking-wider">Street Address</label>
+                <label className="text-xs text-dark-400 uppercase tracking-wider">Street Address <span className="text-red-400 font-bold">*</span></label>
                 <input
                   value={addressForm.line1}
                   onChange={e => setAddressForm({ ...addressForm, line1: e.target.value })}
@@ -709,7 +711,7 @@ export default function UserDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">City</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">City <span className="text-red-400 font-bold">*</span></label>
                   <input
                     value={addressForm.city}
                     onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
@@ -718,7 +720,7 @@ export default function UserDashboard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">Province</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Province <span className="text-red-400 font-bold">*</span></label>
                   <select
                     value={addressForm.province}
                     onChange={e => setAddressForm({ ...addressForm, province: e.target.value })}
@@ -729,7 +731,7 @@ export default function UserDashboard() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-dark-400 uppercase tracking-wider">Postal Code</label>
+                  <label className="text-xs text-dark-400 uppercase tracking-wider">Postal Code <span className="text-red-400 font-bold">*</span></label>
                   <input
                     value={addressForm.postalCode}
                     onChange={e => setAddressForm({ ...addressForm, postalCode: e.target.value.toUpperCase() })}

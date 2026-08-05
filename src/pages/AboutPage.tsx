@@ -19,43 +19,18 @@ const trustStats = [
   { icon: ShieldCheck, value: 'Supervised', label: 'Every single run' },
 ];
 
-const sessionTimeline = [
-  {
-    step: '01',
-    title: 'Doorstep Pickup & Safety Check',
-    subtitle: 'Arrival & Greeting',
-    description: 'We arrive at your door in the climate-controlled ZoomieVan, greet your dog, and fit them safely with our specialized harness.',
-  },
-  {
-    step: '02',
-    title: 'Dog-Paced Slat Mill Run',
-    subtitle: 'Self-Powered Exercise',
-    description: 'Your dog controls the movement, speed, and stop. The non-motorized belt moves only when your dog walks or runs.',
-  },
-  {
-    step: '03',
-    title: 'Supervised Conditioning & Water Breaks',
-    subtitle: '1-on-1 Continuous Care',
-    description: 'Our certified handler stays with your dog every second—monitoring stamina, providing fresh water, and giving positive encouragement.',
-  },
-  {
-    step: '04',
-    title: 'Cool Down & Happy Return',
-    subtitle: 'Fulfilled & Relaxed',
-    description: 'After a gentle cool-down walk and towel-off, we return your dog to your door happy, relaxed, and fully exercised!',
-  },
-];
+
 
 const founderLetter = [
-  'My love for dogs has always been more than a passion—it’s a way of life. As a lifelong dog owner, I’ve experienced firsthand the joy, energy, and unconditional love our four-legged companions bring into our lives. That love inspired me to create something unique for pet parents who want the very best for their dogs.',
-  'Zoomie Van was born from a simple idea: make professional canine fitness convenient, accessible, and enjoyable. Instead of asking busy families to travel, we bring the experience directly to them with our fully mobile dog fitness service.',
-  'Our focus is on safe, structured, one-on-one exercise using non-motorized slatmills in a climate-controlled environment. Every session is designed around your dog’s individual needs, helping build confidence, improve fitness, and support their overall health—whether they’re an energetic working breed, an athletic companion, or simply a dog who needs a healthy outlet for their energy.',
-  'Before launching Zoomie Van, I spent years building a career in customer service, healthcare, and business. Those experiences taught me the importance of trust, professionalism, and treating every client with genuine care. Today, I bring those same values to every dog and every family we serve.',
-  'At Zoomie Van, we believe that every dog deserves the opportunity to move, thrive, and enjoy a healthier, happier life.',
-  'Thank you for trusting us with a member of your family. We can’t wait to welcome you and your pup to the Zoomie Van community.',
+  'My love for dogs has always been more than a passion, it is a way of life. As a lifelong dog owner, I have experienced firsthand the joy, energy, and unconditional love our four-legged companions bring into our lives. That love inspired me to create something unique for pet parents who want the very best for their dogs.',
+  'ZoomieVan was born from a simple idea: make professional canine fitness convenient, accessible, and enjoyable. Instead of asking busy families to travel, we bring the experience directly to them with our fully mobile dog fitness service.',
+  'Our focus is on safe, structured, one-on-one exercise using non-motorized slatmills in a climate-controlled environment. Every session is designed around your dog’s individual needs, helping build confidence, improve fitness, and support their overall health, whether they are an energetic working breed, an athletic companion, or simply a dog who needs a healthy outlet for their energy.',
+  'Before launching ZoomieVan, I spent years building a career in customer service, healthcare, and business. Those experiences taught me the importance of trust, professionalism, and treating every client with genuine care. Today, I bring those same values to every dog and every family we serve.',
+  'At ZoomieVan, we believe that every dog deserves the opportunity to move, thrive, and enjoy a healthier, happier life.',
+  'Thank you for trusting us with a member of your family. We cannot wait to welcome you and your pup to the ZoomieVan community.',
 ];
 
-/** Founder portrait. Drop a photo at /images/founder-megha.jpg to replace the placeholder. */
+/** Founder portrait. */
 function FounderPortrait() {
   const [failed, setFailed] = useState(false);
 
@@ -63,7 +38,7 @@ function FounderPortrait() {
     <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#EAF2FF] shadow-2xl group">
       {!failed ? (
         <img
-          src="/images/owner-img.jpeg"
+          src="/images/owner_img_new.png"
           alt="Megha George, founder of ZoomieVan"
           width={800}
           height={1000}
@@ -253,94 +228,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Why a slat mill */}
-      <section className="relative bg-[#F7FBFF] px-4 py-14 text-[#071A3D] sm:px-6 lg:px-8 lg:py-24">
-        <div className="mx-auto max-w-7xl">
-          {/* Top row: Text on Left, Equipment Image on Right */}
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <motion.div {...reveal()}>
-              <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#FFF7ED] px-4 py-2 text-sm font-bold text-brand-700">
-                <Sparkles className="h-4 w-4" />
-                Why a slat mill?
-              </span>
-              <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-                It moves when your dog moves.
-              </h2>
-              <p className="mt-5 text-base leading-relaxed text-[#315B96] sm:text-lg">
-                A slat mill is a non-motorized treadmill designed for dogs. Unlike a motorized
-                treadmill, the belt is not powered by a machine. Your dog controls the movement,
-                the speed, and the stop. That makes the experience more natural and easier to
-                shape around each dog&rsquo;s comfort.
-              </p>
-            </motion.div>
 
-            <motion.div {...reveal(0.1)} className="relative overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#071A3D] shadow-xl">
-              <img
-                src="/images/dog-machine1.png"
-                alt="Non-motorized slatmill equipment installed inside a ZoomieVan"
-                width={800}
-                height={384}
-                loading="lazy"
-                className="h-64 sm:h-72 lg:h-80 w-full object-cover object-center transition-transform duration-500 hover:scale-105"
-              />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071A3D]/70 via-transparent to-transparent" />
-              <span className="absolute bottom-3 left-3 rounded-xl bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-white border border-white/20">
-                Non-Motorized Slatmill Equipment
-              </span>
-            </motion.div>
-          </div>
-
-          {/* Bottom row: Interactive Session Timeline Feature */}
-          <div className="mt-16 border-t border-[#D6E6FF] pt-14">
-            <div className="text-center max-w-2xl mx-auto mb-10">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-3.5 py-1 text-xs font-bold text-brand-700 mb-2">
-                <Sparkles className="h-3.5 w-3.5" />
-                Session Timeline
-              </span>
-              <h3 className="font-display text-2xl font-bold text-[#071A3D] sm:text-3xl">
-                How Your Dog&apos;s Session Unfolds
-              </h3>
-              <p className="mt-2 text-sm text-[#315B96]">
-                From doorstep pickup to cool-down return, every minute is tailored for safety, fun, and fitness.
-              </p>
-            </div>
-
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative">
-              {sessionTimeline.map((item, index) => (
-                <motion.div
-                  key={item.step}
-                  {...reveal(index * 0.08)}
-                  className="group relative flex flex-col justify-between rounded-3xl border border-[#D6E6FF] bg-white p-6 shadow-lg hover:border-brand-400 hover:shadow-2xl transition-all"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-500 text-sm font-black text-white shadow-md shadow-brand-500/25">
-                        {item.step}
-                      </span>
-                      <span className="rounded-full bg-[#FFF7ED] px-2.5 py-1 text-[10px] font-bold text-brand-700">
-                        {item.subtitle}
-                      </span>
-                    </div>
-
-                    <h4 className="font-display text-base font-bold text-[#071A3D] group-hover:text-brand-600 transition-colors">
-                      {item.title}
-                    </h4>
-
-                    <p className="mt-2 text-xs leading-relaxed text-[#315B96]">
-                      {item.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-[#EAF2FF] flex items-center justify-between text-[11px] font-semibold text-[#0F3D91]">
-                    <span>Phase {index + 1} of 4</span>
-                    <ArrowRight className="h-3.5 w-3.5 text-brand-500 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Mission + CTA */}
       <section className="relative px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
