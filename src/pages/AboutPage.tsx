@@ -140,7 +140,7 @@ export default function AboutPage() {
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
-                { src: '/images/dog-machine1.png', alt: 'Dog running on a ZoomieVan non-motorized slatmill', icon: PawPrint, caption: 'Professional slatmill setup' },
+                { src: '/images/dog_mchine_final1.png', alt: 'Dog running on a ZoomieVan non-motorized slatmill', icon: PawPrint, caption: 'Professional slatmill setup' },
                 { src: '/images/dog-machine3.jpeg', alt: 'Handler supervising a mobile canine cardio session', icon: ShieldCheck, caption: 'Safe & supervised running' },
               ].map(({ src, alt, icon: Icon, caption }) => (
                 <div key={src} className="group relative overflow-hidden rounded-2xl bg-dark-900">
