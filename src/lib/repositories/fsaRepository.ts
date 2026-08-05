@@ -10,6 +10,8 @@ const DEFAULT_ZONES: FSARecord[] = [
   { id: generateId(), fsa: 'T5R', city: 'Edmonton', province: 'AB', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'West', createdAt: new Date().toISOString() },
   { id: generateId(), fsa: 'T5H', city: 'Edmonton', province: 'AB', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'South', createdAt: new Date().toISOString() },
   { id: generateId(), fsa: 'T5X', city: 'Edmonton', province: 'AB', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'South', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'T8A', city: 'Sherwood Park', province: 'AB', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'East', createdAt: new Date().toISOString() },
+  { id: generateId(), fsa: 'T8H', city: 'Sherwood Park', province: 'AB', tier: 'Tier 1', surcharge: 0, status: 'active', region: 'East', createdAt: new Date().toISOString() },
 ];
 
 export async function getAllZones(): Promise<FSARecord[]> {

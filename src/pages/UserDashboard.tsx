@@ -38,6 +38,10 @@ export default function UserDashboard() {
   const [savingConsent, setSavingConsent] = useState(false);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [docUploadSuccess, setDocUploadSuccess] = useState<string | null>(null);
+  const [agreementScrolled, setAgreementScrolled] = useState(false);
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [submittingAgreement, setSubmittingAgreement] = useState(false);
+
   const checkoutStatus = new URLSearchParams(window.location.search).get('checkout');
 
   useEffect(() => {
@@ -48,6 +52,28 @@ export default function UserDashboard() {
       setCheckoutPlan(null);
     }
   }, [checkoutStatus]);
+
+  const handleAgreementScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 30;
+    if (isAtBottom) {
+      setAgreementScrolled(true);
+    }
+  };
+
+  const handleAcceptAgreement = async () => {
+    if (!agreementScrolled || !agreementChecked) return;
+    setSubmittingAgreement(true);
+    try {
+      await acceptLegal();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmittingAgreement(false);
+    }
+  };
+
+  const isAgreementRequired = !!user && (!user.legalAccepted || user.legalVersion !== CURRENT_LEGAL_VERSION);
 
   if (loading) {
     return (
@@ -755,6 +781,121 @@ export default function UserDashboard() {
               >
                 {savingAddress ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save Address
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Mandatory Client Agreement & No-Refund Policy Modal */}
+      {isAgreementRequired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-dark-800 border border-brand-500/40 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl shadow-brand-500/10"
+          >
+            {/* Header */}
+            <div className="p-5 sm:p-6 border-b border-dark-600 bg-dark-900/60">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-400">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-400">Action Required</span>
+                  <h2 className="font-display text-xl font-bold text-white">Client Service Agreement &amp; Policy Waiver</h2>
+                </div>
+              </div>
+              <p className="text-xs text-dark-300 mt-1">
+                Please scroll to the bottom of the agreement below to review and accept our service terms.
+              </p>
+            </div>
+
+            {/* Scrollable Agreement Content Container */}
+            <div className="p-5 sm:p-6 flex-1 overflow-y-auto space-y-4 text-xs sm:text-sm text-dark-200 leading-relaxed custom-scrollbar" onScroll={handleAgreementScroll}>
+              <div className="p-4 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-200 font-medium">
+                <strong className="text-red-300 font-bold uppercase tracking-wider block mb-1 text-xs">
+                  ⚠️ IMPORTANT: STRICT NO-REFUND POLICY
+                </strong>
+                All purchases, trial runs, packages, single runs, and service surcharges paid to ZoomieVan Inc. are 100% final and strictly <strong>NON-REFUNDABLE</strong> under any circumstances once payment is completed. Missed appointments, doorstep late cancellations, user scheduling errors, handler safety refusals, or early session stops are non-refundable.
+              </div>
+
+              <div>
+                <h3 className="font-bold text-white text-sm sm:text-base border-b border-dark-600 pb-1.5 mb-2">1. Scope of Mobile Canine Fitness Services</h3>
+                <p>
+                  ZoomieVan Inc. provides mobile dog fitness workouts using custom, non-motorized slatmills inside climate-controlled vans delivered directly to your doorstep in active Edmonton and Alberta service sectors. Services are subject to sector scheduling, driver routing, and safe handler evaluation.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-white text-sm sm:text-base border-b border-dark-600 pb-1.5 mb-2">2. Strict Non-Refundable Payment Terms</h3>
+                <p>
+                  By purchasing any package or booking a run through Stripe, you explicitly agree that all transactions are non-refundable. Package runs carry no cash redemption value and must be used within their designated validity period. Rescheduling must be requested at least 24 hours prior to a scheduled session window.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-white text-sm sm:text-base border-b border-dark-600 pb-1.5 mb-2">3. Canine Health, Vaccinations &amp; Owner Disclosures</h3>
+                <p>
+                  You certify that your dog is in good physical health and fit for active exercise. You must fully disclose any medical conditions, cardiac or joint history, heat sensitivity, prior injuries, aggression toward humans/dogs, or bite history. Up-to-date Rabies and DHPP vaccination records must be provided prior to service.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-white text-sm sm:text-base border-b border-dark-600 pb-1.5 mb-2">4. Handler Safety Discretion &amp; Session Termination</h3>
+                <p>
+                  ZoomieVan certified handlers hold sole discretion to adjust treadmill pace, restrict session duration, or stop a session immediately if a dog exhibits signs of severe fatigue, distress, heat exhaustion, or unhandled reactivity. Safety-based session adjustments or stops do not entitle the owner to any refund or credit.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-white text-sm sm:text-base border-b border-dark-600 pb-1.5 mb-2">5. Liability Waiver &amp; Release</h3>
+                <p>
+                  To the fullest extent permitted under Canadian federal and Alberta law, you waive and release ZoomieVan Inc., its directors, employees, and mobile handlers from any liabilities, claims, injuries, illnesses, or property damage connected with participation in mobile exercise sessions.
+                </p>
+              </div>
+
+              <div className="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl text-xs text-brand-300 font-bold text-center">
+                ✓ END OF AGREEMENT — Scroll completed. You may now check the declaration below.
+              </div>
+            </div>
+
+            {/* Scroll Indicator & Checkbox Action Footer */}
+            <div className="p-5 border-t border-dark-600 bg-dark-900/80 space-y-3">
+              {!agreementScrolled ? (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-300 flex items-center justify-center gap-2">
+                  <span>👇 Please scroll to the very bottom of the agreement text to unlock acceptance.</span>
+                </div>
+              ) : (
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreementChecked}
+                    onChange={e => setAgreementChecked(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-dark-500 bg-dark-900 text-brand-500 focus:ring-brand-500/40"
+                  />
+                  <span className="text-xs text-white leading-tight font-medium">
+                    I have read, understood, and agree to the <strong>ZoomieVan Terms of Service, Liability Waiver, and Strict No-Refund Policy (Non-refundable once paid)</strong>.
+                  </span>
+                </label>
+              )}
+
+              <button
+                onClick={handleAcceptAgreement}
+                disabled={!agreementScrolled || !agreementChecked || submittingAgreement}
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-sm font-bold text-white hover:from-brand-500 hover:to-brand-400 transition-all shadow-lg shadow-brand-500/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {submittingAgreement ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving Acceptance...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Accept &amp; Continue to Dashboard
+                  </>
+                )}
               </button>
             </div>
           </motion.div>

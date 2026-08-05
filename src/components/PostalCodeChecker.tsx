@@ -9,9 +9,9 @@ import { useAuth } from '../lib/auth';
 
 /** Edmonton Metro Region Canada Post FSA mapping (43 total FSAs across Edmonton, St. Albert, Sherwood Park, Leduc, & Spruce Grove). */
 const EDMONTON_ZONE_MAP: Record<string, ServiceZone> = {
-  // East — Clareview, Beverly, Highlands, Belvedere, Lake District, Capilano, Ottewell, Maple/Tamarack, Energy Park + Sherwood Park (T8A, T8H, T8W)
+  // East — Clareview, Beverly, Highlands, Belvedere, Lake District, Capilano, Ottewell, Maple/Tamarack, Energy Park + Sherwood Park (T8A, T8B, T8C, T8E, T8G, T8H, T8W)
   T5A: 'East', T5B: 'East', T5C: 'East', T5E: 'East', T5Y: 'East', T6A: 'East', T6B: 'East', T6P: 'East', T6S: 'East',
-  T8A: 'East', T8H: 'East', T8W: 'East',
+  T8A: 'East', T8B: 'East', T8C: 'East', T8E: 'East', T8G: 'East', T8H: 'East', T8W: 'East',
   // North — Spruce Avenue, Inglewood, Calder, Castle Downs, Pilot Sound, Rampart + St. Albert (T8N)
   T5K: 'North', T5L: 'North', T5M: 'North', T5V: 'North', T5Z: 'North', T6V: 'North',
   T8N: 'North',

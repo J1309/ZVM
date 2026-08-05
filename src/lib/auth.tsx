@@ -31,6 +31,8 @@ interface AuthContext {
 const AuthCtx = createContext<AuthContext | null>(null);
 
 const SESSION_KEY = 'zoomievan_session';
+const SESSION_TIME_KEY = 'zoomievan_session_time';
+const MAX_SESSION_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours max session lifetime
 
 function bytesToHex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes))
@@ -55,11 +57,25 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const id = sessionStorage.getItem(SESSION_KEY);
-    if (id) {
+    const timeStr = sessionStorage.getItem(SESSION_TIME_KEY);
+    const sessionTime = timeStr ? parseInt(timeStr, 10) : 0;
+    const isExpired = !sessionTime || (Date.now() - sessionTime > MAX_SESSION_DURATION_MS);
+
+    if (id && !isExpired) {
       import('./repositories/userRepository').then(({ getUserById }) =>
-        getUserById(id).then(u => { setUser(u); setLoading(false); })
+        getUserById(id).then(u => {
+          if (u) {
+            setUser(u);
+          } else {
+            sessionStorage.removeItem(SESSION_KEY);
+            sessionStorage.removeItem(SESSION_TIME_KEY);
+          }
+          setLoading(false);
+        })
       );
     } else {
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_TIME_KEY);
       setLoading(false);
     }
   }, []);
@@ -70,6 +86,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     const passwordHash = await hashDemoPassword(password, found.passwordSalt);
     if (found.passwordHash !== passwordHash) return { success: false, error: 'Invalid email or password.' };
     sessionStorage.setItem(SESSION_KEY, found.id);
+    sessionStorage.setItem(SESSION_TIME_KEY, Date.now().toString());
     setUser(found);
     return { success: true };
   }, []);
@@ -88,6 +105,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
       role: 'customer',
     });
     sessionStorage.setItem(SESSION_KEY, created.id);
+    sessionStorage.setItem(SESSION_TIME_KEY, Date.now().toString());
     setUser(created);
 
     if (data.dog.name) {
@@ -121,6 +139,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_TIME_KEY);
     setUser(null);
   }, []);
 
