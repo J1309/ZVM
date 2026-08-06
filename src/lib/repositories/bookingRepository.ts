@@ -49,3 +49,32 @@ export async function getAllBookings(): Promise<Booking[]> {
   }
   return stored;
 }
+
+export async function updateBookingStatus(id: string, status: Booking['status']): Promise<Booking> {
+  const bookings = getItem<Booking[]>(KEY) ?? [];
+  const index = bookings.findIndex(b => b.id === id);
+  if (index !== -1) {
+    bookings[index] = { ...bookings[index], status };
+    setItem(KEY, bookings);
+    return bookings[index];
+  }
+  return { id, vanId: 'VAN-001', fsa: 'T5J', customerName: 'Customer', dogName: 'Dog', date: new Date().toISOString().split('T')[0], sessionFee: 35, surcharge: 0, status, createdAt: new Date().toISOString() };
+}
+
+export async function createManualBooking(booking: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> {
+  const bookings = getItem<Booking[]>(KEY) ?? [];
+  const newBooking: Booking = {
+    ...booking,
+    id: `B${String(bookings.length + 1).padStart(4, '0')}`,
+    createdAt: new Date().toISOString(),
+  };
+  bookings.unshift(newBooking);
+  setItem(KEY, bookings);
+  return newBooking;
+}
+
+export async function deleteBooking(id: string): Promise<void> {
+  const bookings = getItem<Booking[]>(KEY) ?? [];
+  const filtered = bookings.filter(b => b.id !== id);
+  setItem(KEY, filtered);
+}

@@ -73,3 +73,9 @@ export async function acceptLegal(): Promise<User> {
   if (!convex) throw new Error('Production authentication is not configured.');
   return convex.mutation(api.users.acceptLegal, {});
 }
+
+export async function deleteUser(id: string): Promise<void> {
+  const users = getItem<User[]>(KEY) ?? [];
+  const filtered = users.filter(user => user.id !== id);
+  setItem(KEY, filtered);
+}

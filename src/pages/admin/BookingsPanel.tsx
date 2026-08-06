@@ -1,9 +1,33 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Search, Filter, PawPrint, User, MapPin, CreditCard, Clock, CheckCircle2, AlertCircle, XCircle, ChevronDown, ChevronUp, Mail, Phone, Trash2, X } from 'lucide-react';
-import { getAllBookings } from '../../lib/repositories/bookingRepository';
+import {
+  Calendar, Search, PawPrint, Clock, ChevronDown, Trash2, X, Plus, Save, RefreshCw
+} from 'lucide-react';
+import { getAllBookings, updateBookingStatus, createManualBooking, deleteBooking } from '../../lib/repositories/bookingRepository';
 import { Booking } from '../../lib/types';
 import { api, convex } from '../../lib/convexClient';
+
+const statusBadgeStyles: Record<Booking['status'], string> = {
+  scheduled: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+  completed: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
+  pending_payment: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+  cancelled: 'bg-red-500/10 text-red-300 border-red-500/20',
+};
+
+const emptyBookingForm = {
+  customerName: '',
+  customerEmail: '',
+  customerPhone: '',
+  dogName: '',
+  planName: 'Single Run',
+  date: new Date().toISOString().split('T')[0],
+  timeSlot: '09:00 AM - 10:00 AM',
+  addressLine: '1234 Jasper Ave, Edmonton, AB',
+  fsa: 'T5J',
+  sessionFee: 35,
+  surcharge: 0,
+  status: 'scheduled' as Booking['status'],
+};
 
 export default function AdminBookingsPanel() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -11,8 +35,15 @@ export default function AdminBookingsPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+
+  // Sweep state
   const [sweeping, setSweeping] = useState(false);
   const [sweepMessage, setSweepMessage] = useState<string | null>(null);
+
+  // New Booking Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [bookingForm, setBookingForm] = useState(emptyBookingForm);
+  const [saving, setSaving] = useState(false);
 
   const fetchBookings = () => {
     setLoading(true);
@@ -42,11 +73,48 @@ export default function AdminBookingsPanel() {
     }
   };
 
-  const filteredBookings = bookings.filter(b => {
-    const matchesStatus =
-      statusFilter === 'all' ||
-      b.status === statusFilter;
+  const handleStatusChange = async (id: string, newStatus: Booking['status']) => {
+    await updateBookingStatus(id, newStatus);
+    fetchBookings();
+  };
 
+  const handleDeleteBooking = async (id: string, customerName?: string) => {
+    if (!confirm(`Delete booking ${id} for ${customerName || 'customer'}?`)) return;
+    await deleteBooking(id);
+    fetchBookings();
+  };
+
+  const handleCreateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingForm.customerName || !bookingForm.date) return;
+    setSaving(true);
+    try {
+      await createManualBooking({
+        vanId: 'VAN-001',
+        customerName: bookingForm.customerName,
+        customerEmail: bookingForm.customerEmail,
+        customerPhone: bookingForm.customerPhone,
+        dogName: bookingForm.dogName,
+        planName: bookingForm.planName,
+        date: bookingForm.date,
+        timeSlot: bookingForm.timeSlot,
+        fsa: bookingForm.fsa,
+        sessionFee: bookingForm.sessionFee,
+        surcharge: bookingForm.surcharge,
+        status: bookingForm.status,
+      });
+      setShowAddModal(false);
+      setBookingForm(emptyBookingForm);
+      fetchBookings();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
     const query = searchQuery.toLowerCase().trim();
     const matchesQuery =
       !query ||
@@ -69,8 +137,8 @@ export default function AdminBookingsPanel() {
   if (loading) {
     return (
       <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-dark-700/30 animate-pulse rounded-2xl" />
         ))}
       </div>
     );
@@ -100,7 +168,7 @@ export default function AdminBookingsPanel() {
               : 'bg-dark-800/60 border-dark-600 text-dark-300 hover:text-white'
           }`}
         >
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Scheduled (Paid)</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Scheduled</span>
           <p className="text-2xl font-black text-emerald-300 mt-1">{scheduledCount}</p>
         </button>
 
@@ -124,7 +192,7 @@ export default function AdminBookingsPanel() {
               : 'bg-dark-800/60 border-dark-600 text-dark-300 hover:text-white'
           }`}
         >
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Pending Payment</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Pending Pay</span>
           <p className="text-2xl font-black text-amber-300 mt-1">{pendingCount}</p>
         </button>
 
@@ -141,203 +209,297 @@ export default function AdminBookingsPanel() {
         </button>
       </div>
 
-      {/* Search Bar & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-dark-800 border border-dark-600 rounded-2xl">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
+      {/* Control Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by customer, dog, email, date..."
-            className="w-full h-10 pl-10 pr-4 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50"
+            placeholder="Search by customer name, dog, plan, FSA, date..."
+            className="w-full h-11 bg-dark-800 border border-dark-600 rounded-xl pl-10 pr-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="h-4 w-4 text-dark-400 shrink-0" />
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="h-10 px-3 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500/50"
-          >
-            <option value="all">All Statuses ({totalCount})</option>
-            <option value="scheduled">Scheduled ({scheduledCount})</option>
-            <option value="completed">Completed ({completedCount})</option>
-            <option value="pending_payment">Pending Payment ({pendingCount})</option>
-            <option value="cancelled">Cancelled ({cancelledCount})</option>
-          </select>
+        <div className="flex items-center gap-2">
+          {convex && (
+            <button
+              onClick={handleSweepUnpaid}
+              disabled={sweeping}
+              className="h-11 px-4 rounded-xl bg-dark-800 border border-dark-600 text-xs font-semibold text-dark-200 hover:text-white hover:bg-dark-700 transition flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${sweeping ? 'animate-spin' : ''}`} />
+              Sweep Un-paid
+            </button>
+          )}
+
           <button
-            onClick={handleSweepUnpaid}
-            disabled={sweeping}
-            className="h-10 px-3.5 inline-flex items-center gap-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-bold text-red-300 hover:bg-red-500/20 transition disabled:opacity-50 shrink-0"
-            title="Clean legacy test reservations created before payment verification"
+            onClick={() => setShowAddModal(true)}
+            className="h-11 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-sm font-bold text-white hover:from-brand-500 hover:to-brand-400 transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"
           >
-            <Trash2 className="h-3.5 w-3.5 text-red-400" />
-            {sweeping ? 'Cleaning...' : 'Clean Test Entries'}
+            <Plus className="w-4 h-4" />
+            New Booking
           </button>
         </div>
       </div>
 
       {sweepMessage && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-200 flex items-center justify-between">
+        <div className="p-3 bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs rounded-xl flex items-center justify-between">
           <span>{sweepMessage}</span>
           <button onClick={() => setSweepMessage(null)} className="text-dark-400 hover:text-white">
-            <X className="h-4 w-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Booking List Cards */}
-      <div className="space-y-3">
-        {filteredBookings.length === 0 ? (
-          <div className="p-8 text-center bg-dark-800/40 border border-dark-600 rounded-2xl">
-            <Calendar className="h-8 w-8 text-dark-400 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-white">No bookings found</p>
-            <p className="text-xs text-dark-400 mt-1">Try adjusting your filter or search criteria.</p>
-          </div>
-        ) : (
-          filteredBookings.map(b => {
+      {/* Bookings List */}
+      {filteredBookings.length === 0 ? (
+        <div className="text-center py-12 bg-dark-800/40 rounded-2xl border border-dark-700/60">
+          <Calendar className="w-8 h-8 text-dark-500 mx-auto mb-2" />
+          <p className="text-sm text-dark-300 font-medium">No bookings match the current filter.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredBookings.map(b => {
             const isExpanded = expandedBookingId === b.id;
-
             return (
-              <div
+              <motion.div
                 key={b.id}
-                className="overflow-hidden rounded-2xl border border-dark-600 bg-dark-800/80 transition hover:border-dark-500"
+                layout
+                className="bg-dark-800/80 rounded-2xl border border-dark-600 overflow-hidden hover:border-dark-500 transition-colors"
               >
-                {/* Main Card Summary */}
-                <div
-                  onClick={() => setExpandedBookingId(isExpanded ? null : b.id)}
-                  className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer"
-                >
-                  <div className="flex items-start sm:items-center gap-3.5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20">
-                      <PawPrint className="h-5 w-5" />
+                <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-400 shrink-0 font-bold text-xs">
+                      {b.fsa || 'FSA'}
                     </div>
 
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-bold text-white">{b.customerName}</h3>
-                        <span className="text-xs font-semibold text-brand-300">({b.dogName})</span>
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-dark-700 text-dark-300 border border-dark-600">
-                          {b.fsa || 'FSA N/A'}
-                        </span>
-                      </div>
-
-                      <div className="mt-1 flex items-center gap-3 text-xs text-dark-300 flex-wrap">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5 text-brand-400" />
-                          <strong className="text-white">{b.date}</strong>
-                        </span>
-                        {b.timeSlot && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5 text-brand-400" />
-                            <span>{b.timeSlot}</span>
+                        <span className="text-xs font-bold text-white">{b.customerName || 'Customer'}</span>
+                        {b.dogName && (
+                          <span className="text-xs text-brand-300 font-medium flex items-center gap-1 bg-brand-500/10 px-2 py-0.5 rounded-md border border-brand-500/20">
+                            <PawPrint className="w-3 h-3" /> {b.dogName}
                           </span>
                         )}
                         {b.planName && (
+                          <span className="text-[10px] font-bold text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20 uppercase tracking-wider">
+                            {b.planName}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 mt-1 text-xs text-dark-400 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-dark-500" /> {b.date}
+                        </span>
+                        {b.timeSlot && (
                           <span className="flex items-center gap-1">
-                            <CreditCard className="h-3.5 w-3.5 text-brand-400" />
-                            <span>{b.planName}</span>
+                            <Clock className="w-3.5 h-3.5 text-dark-500" /> {b.timeSlot}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between lg:justify-end gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-dark-700/60">
-                    <div className="text-right">
-                      <p className="text-base font-black text-white">${b.sessionFee + (b.surcharge || 0)} CAD</p>
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
-                        b.status === 'scheduled' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' :
-                        b.status === 'completed' ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30' :
-                        b.status === 'pending_payment' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' :
-                        'bg-red-500/15 text-red-300 border border-red-500/30'
-                      }`}>
-                        {b.status === 'scheduled' && <CheckCircle2 className="h-3 w-3 text-emerald-400" />}
-                        {b.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-blue-400" />}
-                        {b.status === 'pending_payment' && <AlertCircle className="h-3 w-3 text-amber-400" />}
-                        {b.status === 'cancelled' && <XCircle className="h-3 w-3 text-red-400" />}
-                        {b.status === 'scheduled' ? 'Scheduled (Paid)' : b.status}
-                      </span>
-                    </div>
+                  {/* Status Dropdown & Actions */}
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    <select
+                      value={b.status}
+                      onChange={e => handleStatusChange(b.id, e.target.value as Booking['status'])}
+                      className={`h-9 px-3 text-xs font-bold rounded-xl border focus:outline-none cursor-pointer ${statusBadgeStyles[b.status]}`}
+                    >
+                      <option value="scheduled" className="bg-dark-900 text-emerald-300">Scheduled</option>
+                      <option value="completed" className="bg-dark-900 text-blue-300">Completed</option>
+                      <option value="pending_payment" className="bg-dark-900 text-amber-300">Pending Pay</option>
+                      <option value="cancelled" className="bg-dark-900 text-red-300">Cancelled</option>
+                    </select>
 
-                    <div className="p-1.5 rounded-lg bg-dark-700 text-dark-300">
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </div>
+                    <button
+                      onClick={() => handleDeleteBooking(b.id, b.customerName)}
+                      className="p-2 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                      title="Delete Booking"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => setExpandedBookingId(isExpanded ? null : b.id)}
+                      className="p-2 text-dark-400 hover:text-white rounded-lg transition"
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
                   </div>
                 </div>
 
-                {/* Expanded Details Section */}
+                {/* Expanded Booking Details */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-dark-700/80 bg-dark-900/60 p-4 sm:p-5"
+                      className="border-t border-dark-600 bg-dark-900/50 p-4 space-y-3 text-xs text-dark-300"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                        {/* Customer & Address Details */}
-                        <div className="p-3.5 rounded-xl bg-dark-800 border border-dark-600/80 space-y-2">
-                          <p className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                            <User className="h-3.5 w-3.5 text-brand-400" />
-                            Customer Details
-                          </p>
-                          <p className="text-dark-200"><strong className="text-white">Name:</strong> {b.customerName}</p>
-                          {b.customerEmail && (
-                            <p className="text-dark-200 flex items-center gap-1">
-                              <Mail className="h-3 w-3 text-dark-400" />
-                              {b.customerEmail}
-                            </p>
-                          )}
-                          {b.customerPhone && (
-                            <p className="text-dark-200 flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-dark-400" />
-                              {b.customerPhone}
-                            </p>
-                          )}
-                          <p className="text-dark-200 flex items-start gap-1 mt-1">
-                            <MapPin className="h-3.5 w-3.5 text-brand-400 shrink-0 mt-0.5" />
-                            <span>{b.address || `FSA Sector: ${b.fsa}`}</span>
-                          </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[10px] text-dark-400 uppercase tracking-wider font-bold mb-1">Customer &amp; Contact</p>
+                          <p className="text-white font-medium">{b.customerName || 'N/A'}</p>
+                          <p className="text-dark-400">{b.customerEmail || 'No email'}</p>
+                          <p className="text-dark-400">{b.customerPhone || 'No phone'}</p>
                         </div>
+                        <div>
+                          <p className="text-white font-medium">Service Zone (FSA: {b.fsa || 'T5J'})</p>
+                          <p className="text-brand-400">Assigned Van: {b.vanId || 'VAN-001'}</p>
+                        </div>
+                      </div>
 
-                        {/* Pet Profile Details */}
-                        <div className="p-3.5 rounded-xl bg-dark-800 border border-dark-600/80 space-y-2">
-                          <p className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                            <PawPrint className="h-3.5 w-3.5 text-brand-400" />
-                            Dog Profile Details
-                          </p>
-                          <p className="text-dark-200"><strong className="text-white">Dog Name:</strong> {b.dogName}</p>
-                          {b.dogBreed && <p className="text-dark-200"><strong className="text-white">Breed:</strong> {b.dogBreed}</p>}
-                          {b.dogWeight ? <p className="text-dark-200"><strong className="text-white">Weight:</strong> {b.dogWeight} lbs</p> : null}
-                          {b.dogAge ? <p className="text-dark-200"><strong className="text-white">Age:</strong> {b.dogAge} years</p> : null}
-                          {b.dogEnergy && <p className="text-dark-200"><strong className="text-white">Energy Level:</strong> {b.dogEnergy}</p>}
-                        </div>
-
-                        {/* Subscription & Session Details */}
-                        <div className="p-3.5 rounded-xl bg-dark-800 border border-dark-600/80 space-y-2">
-                          <p className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                            <CreditCard className="h-3.5 w-3.5 text-brand-400" />
-                            Subscription &amp; Session
-                          </p>
-                          <p className="text-dark-200"><strong className="text-white">Subscription Plan:</strong> {b.planName || 'Single Session'}</p>
-                          <p className="text-dark-200"><strong className="text-white">Session Fee:</strong> ${b.sessionFee} CAD</p>
-                          <p className="text-dark-200"><strong className="text-white">Zone Surcharge:</strong> ${b.surcharge || 0} CAD</p>
-                          <p className="text-dark-200"><strong className="text-white">Total Amount:</strong> ${b.sessionFee + (b.surcharge || 0)} CAD</p>
-                          <p className="text-dark-200"><strong className="text-white">Booking Date:</strong> {b.date}</p>
-                          <p className="text-dark-200"><strong className="text-white">Pickup Time Slot:</strong> {b.timeSlot || 'Not assigned'}</p>
-                        </div>
+                      <div className="pt-2 border-t border-dark-700/60 flex items-center justify-between text-xs">
+                        <span className="text-dark-400">Booking ID: <code className="text-white font-mono">{b.id}</code></span>
+                        <span className="font-bold text-white">Fee: ${b.sessionFee || 35}</span>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
+
+      {/* Manual Booking Creation Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-dark-800 border border-dark-600 rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+          >
+            <div className="p-5 border-b border-dark-600 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <h3 className="font-display font-bold text-lg text-white">Create Manual Session Booking</h3>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="text-dark-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBooking} className="p-5 flex-1 overflow-y-auto space-y-4 text-xs sm:text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">Customer Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bookingForm.customerName}
+                    onChange={e => setBookingForm({ ...bookingForm, customerName: e.target.value })}
+                    placeholder="Sarah Connor"
+                    className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">Customer Email</label>
+                  <input
+                    type="email"
+                    value={bookingForm.customerEmail}
+                    onChange={e => setBookingForm({ ...bookingForm, customerEmail: e.target.value })}
+                    placeholder="sarah@example.com"
+                    className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">Dog Name</label>
+                  <input
+                    type="text"
+                    value={bookingForm.dogName}
+                    onChange={e => setBookingForm({ ...bookingForm, dogName: e.target.value })}
+                    placeholder="Buster"
+                    className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">Plan Package</label>
+                  <select
+                    value={bookingForm.planName}
+                    onChange={e => setBookingForm({ ...bookingForm, planName: e.target.value })}
+                    className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="Single Run">Single Run ($35)</option>
+                    <option value="Trial Run">Trial Run ($70 - 2 Runs)</option>
+                    <option value="Package 1">Package 1 ($110 - 3 Runs)</option>
+                    <option value="Package 2">Package 2 ($200 - 6 Runs)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">Booking Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={bookingForm.date}
+                    onChange={e => setBookingForm({ ...bookingForm, date: e.target.value })}
+                    className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">Time Slot Window</label>
+                  <select
+                    value={bookingForm.timeSlot}
+                    onChange={e => setBookingForm({ ...bookingForm, timeSlot: e.target.value })}
+                    className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="09:00 AM - 10:00 AM">Session 1 (09:00 AM - 10:00 AM)</option>
+                    <option value="10:00 AM - 11:00 AM">Session 2 (10:00 AM - 11:00 AM)</option>
+                    <option value="11:00 AM - 12:00 PM">Session 3 (11:00 AM - 12:00 PM)</option>
+                    <option value="12:00 PM - 01:00 PM">Session 4 (12:00 PM - 01:00 PM)</option>
+                    <option value="01:00 PM - 02:00 PM">Session 5 (01:00 PM - 02:00 PM)</option>
+                    <option value="02:00 PM - 03:00 PM">Session 6 (02:00 PM - 03:00 PM)</option>
+                    <option value="03:00 PM - 04:00 PM">Session 7 (03:00 PM - 04:00 PM)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-dark-300 mb-1">Delivery Address</label>
+                <input
+                  type="text"
+                  value={bookingForm.addressLine}
+                  onChange={e => setBookingForm({ ...bookingForm, addressLine: e.target.value })}
+                  placeholder="1234 Jasper Ave, Edmonton, AB"
+                  className="w-full h-10 bg-dark-900 border border-dark-600 rounded-xl px-3 text-white focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div className="p-4 border-t border-dark-600 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-xs font-bold rounded-xl border border-dark-600 text-dark-300 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white hover:from-brand-500 hover:to-brand-400 shadow-lg shadow-brand-500/25 flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Creating...' : 'Create Booking'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
