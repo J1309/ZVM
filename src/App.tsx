@@ -77,7 +77,7 @@ function LandingPage() {
 
   useEffect(() => {
     const img = new Image();
-    img.src = '/images/dog_mchine_final1.png';
+    img.src = '/images/hero-rottweiler-van.jpg';
     landingModules.then(() => setModulesReady(true));
   }, []);
 

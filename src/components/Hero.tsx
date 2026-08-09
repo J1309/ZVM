@@ -22,9 +22,9 @@ export default function Hero() {
     <section ref={containerRef} className="hero-section relative overflow-hidden bg-[#071A3D] lg:flex lg:min-h-screen lg:items-center">
       <motion.div className="absolute inset-0 hidden lg:block" style={{ y }}>
         <img
-          src="/images/dog_mchine_final1.png"
-          alt="ZoomieVan slat mill fitness setup"
-          className="h-full w-full object-cover object-center opacity-85"
+          src="/images/hero-rottweiler-van.jpg"
+          alt="Rottweiler sitting in front of ZoomieVan mobile fitness van on a sunny neighbourhood street"
+          className="h-full w-full object-cover object-center opacity-90"
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,26,61,0.92)_0%,rgba(15,61,145,0.70)_48%,rgba(7,26,61,0.10)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,26,61,0.35)_0%,transparent_34%,rgba(7,26,61,0.42)_100%)]" />
@@ -32,8 +32,8 @@ export default function Hero() {
 
       <div className="relative z-0 block bg-[#071A3D] pt-20 lg:hidden">
         <img
-          src="/images/dog_mchine_final1.png"
-          alt="ZoomieVan slat mill fitness setup"
+          src="/images/hero-rottweiler-van.jpg"
+          alt="Rottweiler sitting in front of ZoomieVan mobile fitness van on a sunny neighbourhood street"
           className="h-auto w-full object-contain"
         />
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-[#071A3D]" />
