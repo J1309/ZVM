@@ -424,13 +424,33 @@ export default function UserDashboard() {
           </div>
         </motion.div>
 
-        {/* Step 1 — Choose your plan */}
+        {/* Operational Notice Banner */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-8 p-6 bg-dark-800/60 rounded-3xl border border-dark-600 shadow-xl"
+          className="mt-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500/20 via-brand-500/25 to-amber-500/20 border border-amber-400/50 text-white shadow-xl text-center"
         >
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <span className="px-3 py-1 rounded-full bg-amber-400 text-black font-black text-xs uppercase tracking-wider shrink-0 shadow-md">
+              🚀 PRE-LAUNCH PREPARATION
+            </span>
+            <span className="font-bold text-sm sm:text-base text-amber-200">
+              Session bookings &amp; online payments are currently paused as ZoomieVan prepares for live operations.
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-dark-300">
+            Subscription tabs, session scheduling windows, and payment options remain visible below for preview purposes.
+          </p>
+        </motion.div>
+
+        <div className="pointer-events-none opacity-75 select-none">
+          {/* Step 1 — Choose your plan */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-8 p-6 bg-dark-800/60 rounded-3xl border border-dark-600 shadow-xl"
+          >
           <div className="flex flex-col items-center justify-center text-center mb-6">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-xs font-black text-white shadow-md shadow-brand-500/20 mb-2">1</span>
             <h2 className="font-display text-2xl font-bold text-white">Choose Your Plan</h2>
@@ -638,6 +658,7 @@ export default function UserDashboard() {
           </button>
           {checkoutError && <p className="mt-3 text-sm text-red-300">{checkoutError}</p>}
         </motion.div>
+        </div>
       </div>
 
       {/* Dog Profile Modal */}

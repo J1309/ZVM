@@ -6,9 +6,9 @@ export default function CTA() {
     <section className="cta-section relative overflow-hidden bg-[#071A3D] py-16 lg:py-24">
       <div className="absolute inset-y-0 right-0 hidden w-2/5 lg:block">
         <img
-          src="/images/van-exterior.jpg"
-          alt="ZoomieVan mobile dog gym vehicle"
-          className="h-full w-full object-cover"
+          src="/images/dog_mchine_final1.png"
+          alt="ZoomieVan slat mill setup"
+          className="h-full w-full object-cover opacity-80"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#071A3D] via-[#071A3D]/55 to-transparent" />
       </div>

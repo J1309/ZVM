@@ -25,7 +25,7 @@ const steps = [
     icon: Activity,
     title: 'They control the pace',
     description: 'The non-motorized slat mill moves only when your dog moves, creating a natural supervised run.',
-    image: '/images/how-slatmill-run.jpg',
+    image: '/images/dog_mchine_final1.png',
   },
 ];
 
