@@ -261,8 +261,13 @@ export default function AdminUsersPanel() {
                       {initials(user.name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-bold text-white truncate">{user.name}</p>
+                        {userPayments.some(p => p.planKey === 'trial_run' && p.status === 'paid') && (
+                          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-md">
+                            ⭐ Founding Member
+                          </span>
+                        )}
                         {user.role === 'admin' && (
                           <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-md">
                             Admin

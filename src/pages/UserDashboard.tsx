@@ -477,7 +477,7 @@ export default function UserDashboard() {
 
                     <div className="mb-2">
                       <span className="font-display text-2xl font-black text-white">${plan.price}</span>
-                      <span className="text-[11px] font-semibold text-dark-400 ml-1">CAD</span>
+                      <span className="text-[11px] font-bold text-dark-300 ml-1">+ tax CAD</span>
                     </div>
 
                     <p className="text-xs text-dark-300 leading-relaxed min-h-[36px]">{plan.summary}</p>

@@ -19,7 +19,7 @@ export async function getFoundingMemberStats(): Promise<FoundingMemberStats> {
   const trialPayments = payments.filter(p => p.planKey === 'trial_run' && p.status === 'paid');
   
   const manualOverride = getItem<number | null>(OVERRIDE_KEY);
-  const claimedCount = typeof manualOverride === 'number' ? manualOverride : Math.min(trialPayments.length + 12, MAX_FOUNDING_MEMBERS);
+  const claimedCount = typeof manualOverride === 'number' ? manualOverride : Math.min(trialPayments.length, MAX_FOUNDING_MEMBERS);
   const remainingCount = Math.max(0, MAX_FOUNDING_MEMBERS - claimedCount);
   const isOfferActive = remainingCount > 0;
   

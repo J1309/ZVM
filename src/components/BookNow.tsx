@@ -160,13 +160,14 @@ export default function BookNow() {
                           <div className="flex items-center gap-1.5 justify-end">
                             <span className="text-xs text-dark-400 line-through font-bold">${stats.originalPrice}</span>
                             <span className="font-display text-3xl font-bold text-emerald-600">${stats.trialPrice}</span>
+                            <span className="text-xs font-bold text-[#315B96]">+ tax</span>
                           </div>
                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wide">50% OFF · Founding Member</span>
                         </div>
                       ) : (
                         <div>
                           <span className="font-display text-3xl font-bold text-brand-600">${plan.price}</span>
-                          <span className="ml-1 text-xs text-[#315B96]">/{plan.period}</span>
+                          <span className="ml-1 text-xs font-bold text-[#315B96]">+ tax /{plan.period}</span>
                         </div>
                       )}
                     </div>
