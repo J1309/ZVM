@@ -1,26 +1,29 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, DollarSign, Activity, MapPinned } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Activity, MapPinned, Star } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
 import { getAllVans } from '../../lib/repositories/fleetRepository';
 import { getAllZones } from '../../lib/repositories/fsaRepository';
 import { getAllVaccines } from '../../lib/repositories/vaccineRepository';
 import { Booking, FleetVan, FSARecord, VaccineRecord } from '../../lib/types';
+import { getFoundingMemberStats, setManualFoundingClaimedCount, FoundingMemberStats } from '../../lib/foundingMembers';
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [vans, setVans] = useState<FleetVan[]>([]);
   const [zones, setZones] = useState<FSARecord[]>([]);
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
+  const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAllBookings(), getAllVans(), getAllZones(), getAllVaccines()]).then(
-      ([b, v, z, vac]) => {
+    Promise.all([getAllBookings(), getAllVans(), getAllZones(), getAllVaccines(), getFoundingMemberStats()]).then(
+      ([b, v, z, vac, fStats]) => {
         setBookings(b);
         setVans(v);
         setZones(z);
         setVaccines(vac);
+        setFoundingStats(fStats);
         setLoading(false);
       }
     );
@@ -79,6 +82,79 @@ export default function AdminDashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* Founding Member Special Tracker Card */}
+      {foundingStats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 sm:p-6 bg-gradient-to-br from-dark-800 to-dark-900 rounded-2xl border border-amber-500/30 shadow-xl"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-dark-700/80 pb-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-black">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg font-bold text-white">Founding Member 50% OFF Special Tracker</h3>
+                  <span className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${
+                    foundingStats.isOfferActive
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-dark-700 text-dark-400 border-dark-600'
+                  }`}>
+                    {foundingStats.isOfferActive ? 'ACTIVE (50% OFF Live)' : 'COMPLETED (50/50 Claimed)'}
+                  </span>
+                </div>
+                <p className="text-xs text-dark-300 mt-0.5">
+                  Tracks the first 50 subscribers who receive 50% OFF Trial Runs ($35 instead of $70).
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right self-end sm:self-center">
+              <p className="text-xs text-dark-400 uppercase tracking-wider font-semibold">Claimed Progress</p>
+              <p className="text-xl font-black text-amber-400">{foundingStats.claimedCount} / {foundingStats.maxCount} <span className="text-xs font-normal text-dark-300">spots filled</span></p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="w-full h-3 bg-dark-700 rounded-full overflow-hidden p-0.5 border border-dark-600">
+              <div
+                className="h-full bg-gradient-to-r from-amber-500 via-brand-500 to-amber-400 rounded-full transition-all duration-500"
+                style={{ width: `${(foundingStats.claimedCount / foundingStats.maxCount) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-xs text-dark-400 font-medium">
+              <span>{foundingStats.claimedCount} Claimed</span>
+              <span className="text-amber-300 font-bold">{foundingStats.remainingCount} Spots Remaining</span>
+              <span>Max 50 Members</span>
+            </div>
+          </div>
+
+          {/* Manual Adjust Controls */}
+          <div className="mt-4 pt-4 border-t border-dark-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span className="text-dark-400">Want to manually adjust claimed spots count?</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="50"
+                value={foundingStats.claimedCount}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  setManualFoundingClaimedCount(val);
+                  getFoundingMemberStats().then(setFoundingStats);
+                }}
+                className="w-20 h-8 bg-dark-900 border border-dark-600 rounded-lg px-2 text-white font-bold text-center focus:outline-none focus:border-amber-500"
+              />
+              <span className="text-dark-400">/ 50 Claimed</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <div className="p-5 bg-dark-700/50 rounded-xl border border-dark-600">
         <p className="text-xs text-dark-400 mb-2 uppercase tracking-wider">Operations &amp; Revenue Overview</p>
         <p className="text-dark-200 text-sm leading-relaxed">
