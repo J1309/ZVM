@@ -32,8 +32,8 @@ export default function CTA() {
           </h2>
 
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/78">
-            We bring expert care, premium equipment, and personalized exercise programs
-            directly to your door, so your dog can stay active year-round.
+            ZoomieVan Inc. brings expert care, premium equipment, and personalized exercise
+            programs directly to your door, so your dog can stay active year-round.
           </p>
 
           <div className="mt-7 grid gap-3 text-sm font-semibold text-white/86 sm:grid-cols-2">

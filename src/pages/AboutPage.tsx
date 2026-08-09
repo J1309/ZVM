@@ -204,7 +204,7 @@ export default function AboutPage() {
             {/* Right Column: Greeting Heading & Letter */}
             <motion.div {...reveal(0.1)}>
               <h2 className="font-display text-3xl font-extrabold leading-tight text-[#071A3D] sm:text-4xl lg:text-5xl mb-6">
-                Hi, I&rsquo;m Megha George, the founder of Zoomie Van.
+                Hi, I&rsquo;m Megha George, the founder of ZoomieVan.
               </h2>
 
               <div className="space-y-5 text-base leading-relaxed text-[#315B96] sm:text-[17px] sm:leading-8">

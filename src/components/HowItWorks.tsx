@@ -49,11 +49,11 @@ export default function HowItWorks() {
             Four simple steps
           </span>
           <h2 className="font-display text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-            From booking to a safe, dog-led workout.
+            How a ZoomieVan session works.
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-white/78">
-            The whole service is designed to feel easy for owners, controlled for handlers,
-            and positive for dogs.
+            From booking to a safe, dog-led workout, the whole ZoomieVan service is designed
+            to feel easy for owners, controlled for handlers, and positive for dogs.
           </p>
         </motion.div>
 

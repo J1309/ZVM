@@ -58,10 +58,15 @@ export default function Hero() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.25 }}
-            className="font-display text-4xl font-bold leading-[1.05] text-white sm:text-5xl lg:text-7xl"
+            className="font-display font-bold text-white"
           >
-            Mobile canine fitness,{' '}
-            <span className="text-[#ffb24b]">delivered to your door.</span>
+            <span className="block text-lg font-bold uppercase tracking-[0.18em] text-[#ffb24b] sm:text-xl lg:text-2xl">
+              ZoomieVan Inc.
+            </span>
+            <span className="mt-2 block text-4xl leading-[1.05] sm:text-5xl lg:text-7xl">
+              Mobile canine fitness,{' '}
+              <span className="text-[#ffb24b]">delivered to your door.</span>
+            </span>
           </motion.h1>
 
           <motion.p
@@ -70,8 +75,9 @@ export default function Hero() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="mt-5 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg lg:text-xl"
           >
-            Professional one-on-one canine fitness sessions in fully equipped,
-            climate-controlled mobile vans, built around your dog's pace, comfort, and goals.
+            ZoomieVan brings professional one-on-one canine fitness sessions to your driveway
+            in fully equipped, climate-controlled mobile vans, built around your dog's pace,
+            comfort, and goals.
           </motion.p>
 
           <motion.div
@@ -121,7 +127,7 @@ export default function Hero() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1557B7]">Dog-approved care</p>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1557B7]">The ZoomieVan way</p>
             <p className="mt-1 font-display text-xl font-bold">Built around their pace</p>
           </div>
           <div className="rounded-xl bg-[#EAF2FF] p-2.5 text-[#0F3D91]">

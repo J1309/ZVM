@@ -69,11 +69,11 @@ export default function BookNow() {
             Plans & Pricing
           </span>
           <h2 className="font-display text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-            Pick the fitness routine that fits your dog.
+            Pick the ZoomieVan routine that fits your dog.
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-white/78">
-            Start with a trial, choose a monthly package, or add a single run when your dog
-            needs an extra outlet.
+            Start with a ZoomieVan trial, choose a monthly package, or add a single run when
+            your dog needs an extra outlet.
           </p>
         </motion.div>
 

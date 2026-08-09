@@ -11,8 +11,8 @@ interface FAQData {
 const faqs: FAQData[] = [
   {
     category: 'General',
-    question: 'What is Zoomie Van?',
-    answer: 'Zoomie Van is a mobile canine fitness service that brings a climate-controlled fitness van directly to your home. We use professional, non-motorized slatmills to provide safe, supervised cardio sessions designed to improve your dog’s overall fitness and well-being.',
+    question: 'What is ZoomieVan?',
+    answer: 'ZoomieVan is a mobile canine fitness service that brings a climate-controlled fitness van directly to your home. We use professional, non-motorized slatmills to provide safe, supervised cardio sessions designed to improve your dog’s overall fitness and well-being.',
   },
   {
     category: 'Equipment & Safety',
@@ -129,7 +129,7 @@ const faqs: FAQData[] = [
   {
     category: 'Pricing & Booking',
     question: 'Do you travel to my location?',
-    answer: 'Yes! Zoomie Van comes directly to your home, making it easy and convenient for both you and your dog.',
+    answer: 'Yes! ZoomieVan comes directly to your home, making it easy and convenient for both you and your dog.',
   },
   {
     category: 'Pricing & Booking',
@@ -143,10 +143,10 @@ const faqs: FAQData[] = [
   },
   {
     category: 'General',
-    question: 'What makes Zoomie Van different?',
+    question: 'What makes ZoomieVan different?',
     answer: (
       <div className="space-y-2">
-        <p>Why dog owners love Zoomie Van:</p>
+        <p>Why dog owners love ZoomieVan:</p>
         <ul className="grid gap-2 sm:grid-cols-2 text-xs font-semibold">
           <li className="flex items-center gap-2 rounded-lg bg-[#EAF2FF] p-2 text-[#0F3D91]">🚐 We come directly to you</li>
           <li className="flex items-center gap-2 rounded-lg bg-[#EAF2FF] p-2 text-[#0F3D91]">❄️ Climate-controlled mobile gym</li>
@@ -241,7 +241,7 @@ export default function FAQ() {
             Everything you need to know.
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-white/78">
-            Have questions about Zoomie Van, slatmills, safety, or packages? Here are answers directly from our team.
+            Have questions about ZoomieVan, slatmills, safety, or packages? Here are answers directly from our team.
           </p>
         </motion.div>
 
@@ -309,7 +309,7 @@ export default function FAQ() {
               <div>
                 <h2 className="font-display text-2xl font-bold">Still have questions?</h2>
                 <p className="mt-1 text-sm leading-relaxed text-white/75">
-                  We’re always happy to help! Contact us anytime, and we’ll be glad to help your dog start their fitness journey with Zoomie Van.
+                  We’re always happy to help! Contact us anytime, and we’ll be glad to help your dog start their fitness journey with ZoomieVan.
                 </p>
               </div>
             </div>
