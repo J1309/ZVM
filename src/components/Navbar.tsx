@@ -82,9 +82,14 @@ export default function Navbar() {
         initial={{ y: -96, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4"
+        className="fixed inset-x-0 top-0 z-50 px-0 pt-0 space-y-1 sm:px-4 sm:pt-2"
         aria-label="Primary navigation"
       >
+        <div className="flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-bold text-black bg-gradient-to-r from-amber-400 via-brand-500 to-amber-400 shadow-md">
+          <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse fill-black" />
+          <span>🔥 FOUNDING MEMBER SPECIAL: 50% OFF Your First Trial Run ($35 + tax) — Spots Filling Up Fast!</span>
+          <a href="/#book-now" className="ml-1 font-black underline transition hover:text-white">Claim Offer →</a>
+        </div>
         <motion.div
           animate={{
             y: isScrolled ? 0 : 4,

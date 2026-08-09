@@ -48,7 +48,15 @@ const plans = [
 export default function BookNow() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
   const [selectedPlan, setSelectedPlan] = useState(0);
-  const [stats, setStats] = useState<FoundingMemberStats | null>(null);
+  const [stats, setStats] = useState<FoundingMemberStats | null>({
+    maxCount: 50,
+    claimedCount: 0,
+    remainingCount: 50,
+    isOfferActive: true,
+    trialPrice: 35,
+    originalPrice: 70,
+    discountPercentage: 50,
+  });
   const navigate = useNavigate();
   const { user } = useAuth();
 
