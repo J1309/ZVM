@@ -108,8 +108,8 @@ export default function BookNow() {
 
               <div className="flex items-center gap-2 bg-black/50 px-4 py-2 rounded-2xl border border-amber-400/30 shrink-0">
                 <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-                <span className="text-xs sm:text-sm font-bold text-amber-200">
-                  🔥 <strong className="text-white font-black">{stats.remainingCount} / {stats.maxCount}</strong> Spots Claimable
+                <span className="text-xs sm:text-sm font-bold text-amber-200 uppercase tracking-wide">
+                  🔥 Spots Filling Up Fast!
                 </span>
               </div>
             </div>
