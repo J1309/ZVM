@@ -6,7 +6,7 @@ import { getAllVans } from '../../lib/repositories/fleetRepository';
 import { getAllZones } from '../../lib/repositories/fsaRepository';
 import { getAllVaccines } from '../../lib/repositories/vaccineRepository';
 import { Booking, FleetVan, FSARecord, VaccineRecord } from '../../lib/types';
-import { getFoundingMemberStats, setManualFoundingClaimedCount, FoundingMemberStats } from '../../lib/foundingMembers';
+import { getFoundingMemberStats, setFoundingOfferClosed, FoundingMemberStats } from '../../lib/foundingMembers';
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -14,6 +14,8 @@ export default function AdminDashboard() {
   const [zones, setZones] = useState<FSARecord[]>([]);
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
   const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [offerError, setOfferError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,17 +99,23 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-display text-lg font-bold text-white">Founding Member 50% OFF Special Tracker</h3>
+                  <h3 className="font-display text-lg font-bold text-white">Founding Member Offer Tracker</h3>
                   <span className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${
                     foundingStats.isOfferActive
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                       : 'bg-dark-700 text-dark-400 border-dark-600'
                   }`}>
-                    {foundingStats.isOfferActive ? 'ACTIVE (50% OFF Live)' : 'COMPLETED (50/50 Claimed)'}
+                    {foundingStats.isOfferActive
+                      ? 'ACTIVE'
+                      : foundingStats.manuallyClosed
+                        ? 'ENDED BY ADMIN'
+                        : `COMPLETED (${foundingStats.maxCount}/${foundingStats.maxCount} CLAIMED)`}
                   </span>
                 </div>
                 <p className="text-xs text-dark-300 mt-0.5">
-                  Tracks the first 50 subscribers who receive 50% OFF Trial Runs ($35 instead of $70).
+                  First {foundingStats.maxCount} Trial Run buyers get {foundingStats.bonusSessions} bonus session
+                  {foundingStats.bonusSessions === 1 ? '' : 's'} free (3 runs for the price of 2, $70 + tax).
+                  Counts paid and in-progress checkouts; abandoned checkouts release their slot.
                 </p>
               </div>
             </div>
@@ -129,29 +137,44 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center text-xs text-dark-400 font-medium">
               <span>{foundingStats.claimedCount} Claimed</span>
               <span className="text-amber-300 font-bold">{foundingStats.remainingCount} Spots Remaining</span>
-              <span>Max 50 Members</span>
+              <span>Max {foundingStats.maxCount} Members</span>
             </div>
           </div>
 
-          {/* Manual Adjust Controls */}
+          {/* Offer control — stops the bonus immediately for new checkouts */}
           <div className="mt-4 pt-4 border-t border-dark-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <span className="text-dark-400">Want to manually adjust claimed spots count?</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                max="50"
-                value={foundingStats.claimedCount}
-                onChange={e => {
-                  const val = Number(e.target.value);
-                  setManualFoundingClaimedCount(val);
-                  getFoundingMemberStats().then(setFoundingStats);
+            <span className="text-dark-400">
+              {foundingStats.isOfferActive
+                ? 'Offer is live. Ending it stops the bonus session for all new checkouts.'
+                : foundingStats.manuallyClosed
+                  ? 'Offer was ended manually. Reopen to grant the bonus again.'
+                  : 'All spots are claimed. The offer closed automatically.'}
+            </span>
+            {(foundingStats.isOfferActive || foundingStats.manuallyClosed) && (
+              <button
+                onClick={async () => {
+                  setOfferSaving(true);
+                  setOfferError('');
+                  try {
+                    setFoundingStats(await setFoundingOfferClosed(!foundingStats.manuallyClosed));
+                  } catch (err) {
+                    setOfferError(err instanceof Error ? err.message : 'Could not update the offer.');
+                  } finally {
+                    setOfferSaving(false);
+                  }
                 }}
-                className="w-20 h-8 bg-dark-900 border border-dark-600 rounded-lg px-2 text-white font-bold text-center focus:outline-none focus:border-amber-500"
-              />
-              <span className="text-dark-400">/ 50 Claimed</span>
-            </div>
+                disabled={offerSaving}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 ${
+                  foundingStats.manuallyClosed
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
+                    : 'bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25'
+                }`}
+              >
+                {offerSaving ? 'Saving…' : foundingStats.manuallyClosed ? 'Reopen offer' : 'End offer now'}
+              </button>
+            )}
           </div>
+          {offerError && <p className="mt-2 text-xs text-red-300">{offerError}</p>}
         </motion.div>
       )}
 

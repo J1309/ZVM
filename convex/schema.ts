@@ -118,6 +118,10 @@ export default defineSchema({
     amountCents: v.number(),
     currency: v.string(),
     customerEmail: v.string(),
+    // Founding Member claims get a bonus session at the normal price. Recorded
+    // per-payment so the admin count stays accurate after the offer ends.
+    isFoundingMember: v.optional(v.boolean()),
+    sessionsCount: v.optional(v.number()),
     status: v.union(
       v.literal("checkout_created"),
       v.literal("paid"),
@@ -138,6 +142,8 @@ export default defineSchema({
     eightPackRate: v.number(),
     emergencyBannerText: v.string(),
     emergencyBannerActive: v.boolean(),
+    // Admin kill-switch for the Founding Member offer, independent of the cap.
+    foundingOfferClosed: v.optional(v.boolean()),
     ...timestampFields,
   }),
 

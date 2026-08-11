@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 
 const navLinks = [
   { label: 'Home', href: '/', page: true },
@@ -38,6 +39,16 @@ function MotionUnderline({ active = false }: { active?: boolean }) {
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  // Gated on the live count so the bar disappears once the offer ends.
+  const [founding, setFounding] = useState<FoundingMemberStats | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getFoundingMemberStats()
+      .then(s => { if (active) setFounding(s); })
+      .catch(() => { if (active) setFounding(null); });
+    return () => { active = false; };
+  }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,11 +96,15 @@ export default function Navbar() {
         className="fixed inset-x-0 top-0 z-50 px-0 pt-0 space-y-1 sm:px-4 sm:pt-2"
         aria-label="Primary navigation"
       >
-        <div className="flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-bold text-black bg-gradient-to-r from-amber-400 via-brand-500 to-amber-400 shadow-md">
-          <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse fill-black" />
-          <span>🔥 FOUNDING MEMBER SPECIAL: 50% OFF Your First Trial Run ($35 + tax) — Spots Filling Up Fast!</span>
-          <a href="/#book-now" className="ml-1 font-black underline transition hover:text-white">Claim Offer →</a>
-        </div>
+        {founding?.isOfferActive && (
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-center text-xs font-bold text-black bg-gradient-to-r from-amber-400 via-brand-500 to-amber-400 shadow-md">
+            <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse fill-black" />
+            <span>
+              FOUNDING MEMBER SPECIAL: 1 extra session FREE on your Trial Run &mdash; 3 sessions for $70 + tax
+            </span>
+            <a href="/#book-now" className="font-black underline transition hover:text-white">Claim Offer &rarr;</a>
+          </div>
+        )}
         <motion.div
           animate={{
             y: isScrolled ? 0 : 4,

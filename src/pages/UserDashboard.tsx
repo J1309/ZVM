@@ -5,6 +5,7 @@ import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, 
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
 import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
+import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 import PickupWindowPicker from '../components/PickupWindowPicker';
 import { addVaccine } from '../lib/repositories/vaccineRepository';
 
@@ -41,8 +42,17 @@ export default function UserDashboard() {
   const [agreementScrolled, setAgreementScrolled] = useState(false);
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [submittingAgreement, setSubmittingAgreement] = useState(false);
+  const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
 
   const checkoutStatus = new URLSearchParams(window.location.search).get('checkout');
+
+  useEffect(() => {
+    let active = true;
+    getFoundingMemberStats()
+      .then(s => { if (active) setFoundingStats(s); })
+      .catch(() => { if (active) setFoundingStats(null); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (checkoutStatus === 'cancelled') {
@@ -179,7 +189,11 @@ export default function UserDashboard() {
   };
 
   const currentPlan = STRIPE_PLANS.find(p => p.key === selectedPlan)!;
-  const requiredCount = currentPlan.sessionsCount;
+  // Founding Members get a bonus session on the Trial Run, so they must pick one
+  // extra date. The server enforces the same count at checkout.
+  const foundingApplies = selectedPlan === 'trial_run' && !!foundingStats?.isOfferActive;
+  const bonusSessions = foundingApplies ? (foundingStats?.bonusSessions ?? 0) : 0;
+  const requiredCount = currentPlan.sessionsCount + bonusSessions;
 
   // Switching plans changes how many sessions are required, so clear picks.
   const changePlan = (key: StripePlanKey) => {
@@ -462,6 +476,8 @@ export default function UserDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {STRIPE_PLANS.map(plan => {
               const isSelected = selectedPlan === plan.key;
+              const planIsFounding = plan.key === 'trial_run' && !!foundingStats?.isOfferActive;
+              const planSessions = plan.sessionsCount + (planIsFounding ? (foundingStats?.bonusSessions ?? 0) : 0);
               return (
                 <label
                   key={plan.key}
@@ -501,11 +517,18 @@ export default function UserDashboard() {
                     </div>
 
                     <p className="text-xs text-dark-300 leading-relaxed min-h-[36px]">{plan.summary}</p>
+                    {planIsFounding && (
+                      <p className="mt-1.5 text-[10px] font-black uppercase tracking-wide text-amber-300">
+                        ⭐ Founding Member: +1 free session
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-dark-700/60 flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2.5 py-1 text-[10px] font-bold text-brand-400">
-                      {plan.sessionsCount} Session{plan.sessionsCount === 1 ? '' : 's'}
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                      planIsFounding ? 'bg-amber-500/15 text-amber-300' : 'bg-brand-500/10 text-brand-400'
+                    }`}>
+                      {planSessions} Session{planSessions === 1 ? '' : 's'}
                     </span>
                     {isSelected && (
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">Selected</span>

@@ -48,20 +48,18 @@ const plans = [
 export default function BookNow() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
   const [selectedPlan, setSelectedPlan] = useState(0);
-  const [stats, setStats] = useState<FoundingMemberStats | null>({
-    maxCount: 50,
-    claimedCount: 0,
-    remainingCount: 50,
-    isOfferActive: true,
-    trialPrice: 35,
-    originalPrice: 70,
-    discountPercentage: 50,
-  });
+  // Starts null so nothing is advertised until the real count loads — the old
+  // hardcoded default kept showing "offer active" even when it wasn't.
+  const [stats, setStats] = useState<FoundingMemberStats | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
-    getFoundingMemberStats().then(setStats);
+    let active = true;
+    getFoundingMemberStats()
+      .then(s => { if (active) setStats(s); })
+      .catch(() => { if (active) setStats(null); });
+    return () => { active = false; };
   }, []);
 
   return (
@@ -109,7 +107,7 @@ export default function BookNow() {
                     <span className="text-xs font-bold text-amber-300">Founding Member Special</span>
                   </div>
                   <h3 className="font-display font-bold text-base sm:text-lg text-white mt-0.5">
-                    Get 50% OFF Your First Trial Run ($35 for 2 sessions!)
+                    Get 1 extra session FREE on your Trial Run &mdash; 3 sessions for $70 + tax
                   </h3>
                 </div>
               </div>
@@ -146,7 +144,7 @@ export default function BookNow() {
                 >
                   {isFoundingActive && (
                     <div className="absolute right-4 top-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1 text-xs font-black uppercase tracking-[0.1em] text-white shadow-md flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-white" /> 50% OFF Founding Member
+                      <Star className="w-3 h-3 fill-white" /> +1 Free Session
                     </div>
                   )}
 
@@ -163,25 +161,29 @@ export default function BookNow() {
                   <div className="flex items-end justify-between gap-3">
                     <h3 className="font-display text-2xl font-bold text-[#071A3D]">{plan.name}</h3>
                     <div className="text-right">
-                      {isFoundingActive ? (
-                        <div>
-                          <div className="flex items-center gap-1.5 justify-end">
-                            <span className="text-xs text-dark-400 line-through font-bold">${stats.originalPrice}</span>
-                            <span className="font-display text-3xl font-bold text-emerald-600">${stats.trialPrice}</span>
-                            <span className="text-xs font-bold text-[#315B96]">+ tax</span>
-                          </div>
-                          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wide">50% OFF · Founding Member</span>
-                        </div>
-                      ) : (
-                        <div>
-                          <span className="font-display text-3xl font-bold text-brand-600">${plan.price}</span>
-                          <span className="ml-1 text-xs font-bold text-[#315B96]">+ tax /{plan.period}</span>
-                        </div>
+                      <div>
+                        <span className={`font-display text-3xl font-bold ${isFoundingActive ? 'text-emerald-600' : 'text-brand-600'}`}>
+                          ${plan.price}
+                        </span>
+                        <span className="ml-1 text-xs font-bold text-[#315B96]">
+                          + tax /{isFoundingActive ? '3 sessions' : plan.period}
+                        </span>
+                      </div>
+                      {isFoundingActive && (
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wide">
+                          Founding Member · 1 session free
+                        </span>
                       )}
                     </div>
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-[#315B96]">{plan.description}</p>
                   <ul className="mt-5 grid gap-2.5">
+                    {isFoundingActive && (
+                      <li className="flex items-center gap-2 rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-black text-emerald-700">
+                        <Star className="h-4 w-4 shrink-0 fill-emerald-600 text-emerald-600" />
+                        Founding Member bonus: 3 runs for the price of 2
+                      </li>
+                    )}
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2 text-xs font-semibold text-[#071A3D]">
                         <Check className="h-4 w-4 shrink-0 text-brand-500" />

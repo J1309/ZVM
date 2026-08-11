@@ -28,6 +28,98 @@ function siteUrl(origin: string) {
   return url.origin;
 }
 
+/**
+ * Founding Member offer: the first N Trial Run buyers pay the normal price and
+ * receive one bonus session (2 + 1 = 3). The price is unchanged, so this needs
+ * no Stripe coupon — only the session count differs.
+ */
+export const FOUNDING_MAX_MEMBERS = 50;
+export const FOUNDING_BONUS_SESSIONS = 1;
+const FOUNDING_PLAN_KEY = "trial_run";
+
+// A slot is held by a completed purchase or an in-flight checkout. Abandoned
+// checkouts are marked cancelled by the Stripe webhook, releasing their slot.
+async function foundingSnapshot(ctx: { db: any }) {
+  const rows = await ctx.db.query("payments").collect();
+  const claimedCount = rows.filter((p: any) =>
+    p.isFoundingMember === true &&
+    (p.status === "paid" || p.status === "checkout_created")
+  ).length;
+
+  const settings = await ctx.db.query("cmsSettings").first();
+  const manuallyClosed = settings?.foundingOfferClosed === true;
+  const remainingCount = Math.max(0, FOUNDING_MAX_MEMBERS - claimedCount);
+
+  return {
+    maxCount: FOUNDING_MAX_MEMBERS,
+    claimedCount,
+    remainingCount,
+    bonusSessions: FOUNDING_BONUS_SESSIONS,
+    manuallyClosed,
+    isOfferActive: !manuallyClosed && remainingCount > 0,
+  };
+}
+
+/**
+ * PUBLIC on purpose: the landing page banner needs this without a session.
+ * Returns aggregate counts only — no customer names, emails, or amounts.
+ */
+export const foundingStatus = query({
+  args: {},
+  handler: async (ctx) => foundingSnapshot(ctx),
+});
+
+export const getFoundingSnapshot = internalQuery({
+  args: {},
+  handler: async (ctx) => foundingSnapshot(ctx),
+});
+
+/** Admin kill-switch, independent of the 50-slot cap. */
+export const setFoundingOfferClosed = mutation({
+  args: { closed: v.boolean() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const now = Date.now();
+    const existing = await ctx.db.query("cmsSettings").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { foundingOfferClosed: args.closed, updatedAt: now });
+    } else {
+      await ctx.db.insert("cmsSettings", {
+        heroTagline: "A Professional Dog Gym That Comes to You",
+        baseSessionRate: 35,
+        weeklyPackRate: 110,
+        eightPackRate: 200,
+        emergencyBannerText: "",
+        emergencyBannerActive: false,
+        foundingOfferClosed: args.closed,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    return await foundingSnapshot(ctx);
+  },
+});
+
+/** Admin view: who claimed a founding slot. */
+export const foundingMembers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rows = await ctx.db.query("payments").collect();
+    return rows
+      .filter(p => p.isFoundingMember === true && (p.status === "paid" || p.status === "checkout_created"))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map(p => ({
+        id: p._id,
+        customerEmail: p.customerEmail,
+        status: p.status,
+        sessionsCount: p.sessionsCount ?? null,
+        amountCents: p.amountCents,
+        createdAt: new Date(p.createdAt).toISOString(),
+      }));
+  },
+});
+
 export const listAll = query({
   args: {},
   handler: async (ctx) => {
@@ -75,6 +167,8 @@ export const recordCheckoutSession = internalMutation({
     amountCents: v.number(),
     currency: v.string(),
     customerEmail: v.string(),
+    isFoundingMember: v.boolean(),
+    sessionsCount: v.number(),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -174,9 +268,14 @@ export const createCheckoutSession = action({
     const priceId = process.env[plan.priceEnv];
     if (!priceId) throw new Error(`Missing ${plan.priceEnv}.`);
 
-    // The plan dictates exactly how many sessions must be picked.
-    if (args.sessions.length !== plan.sessionsCount) {
-      throw new Error(`${plan.name} requires ${plan.sessionsCount} session${plan.sessionsCount === 1 ? "" : "s"}.`);
+    // Founding status is decided here, on the server — never trusted from the
+    // client. An eligible Trial Run gets one bonus session at the same price.
+    const founding = await ctx.runQuery(internal.payments.getFoundingSnapshot, {});
+    const isFoundingClaim = args.planKey === FOUNDING_PLAN_KEY && founding.isOfferActive;
+    const expectedSessions = plan.sessionsCount + (isFoundingClaim ? FOUNDING_BONUS_SESSIONS : 0);
+
+    if (args.sessions.length !== expectedSessions) {
+      throw new Error(`${plan.name} requires ${expectedSessions} session${expectedSessions === 1 ? "" : "s"}.`);
     }
 
     const user = await ctx.runQuery(internal.payments.getCheckoutUser, {
@@ -191,10 +290,11 @@ export const createCheckoutSession = action({
     // Reserve all sessions BEFORE creating the Stripe session — this atomically
     // rejects a double-booking. The webhook later confirms (on paid) or the
     // reservations are released (on failure/expiry).
+    const planLabel = isFoundingClaim ? `${plan.name} (Founding Member)` : plan.name;
     const bookingIds = await ctx.runMutation(internal.bookings.reserveMany, {
       userId: user.id,
       sessions: args.sessions,
-      planName: plan.name,
+      planName: planLabel,
       totalAmountCents: plan.amountCents,
       surcharge: 0,
     });
@@ -211,7 +311,9 @@ export const createCheckoutSession = action({
       body.set("client_reference_id", user.id);
       body.set("metadata[userId]", user.id);
       body.set("metadata[planKey]", args.planKey);
-      body.set("metadata[planName]", plan.name);
+      body.set("metadata[planName]", planLabel);
+      body.set("metadata[foundingMember]", isFoundingClaim ? "yes" : "no");
+      body.set("metadata[sessionsCount]", String(expectedSessions));
       body.set("metadata[sessions]", args.sessions.map(s => `${s.date} ${s.timeSlot}`).join("; "));
 
       const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -233,10 +335,12 @@ export const createCheckoutSession = action({
         sessions: args.sessions,
         stripeCheckoutSessionId: session.id,
         planKey: args.planKey,
-        planName: plan.name,
+        planName: planLabel,
         amountCents: plan.amountCents,
         currency: "cad",
         customerEmail: user.email,
+        isFoundingMember: isFoundingClaim,
+        sessionsCount: expectedSessions,
       });
 
       return { url: session.url, checkoutSessionId: session.id };
