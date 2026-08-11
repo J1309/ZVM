@@ -6,13 +6,18 @@ import { ArrowRight, CalendarDays, Check, Heart, ShieldCheck, Sparkles, Star } f
 import { useAuth } from '../lib/auth';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 
+// `sessionCountFeature` is split out so it can be suppressed when the Founding
+// Member bonus applies — otherwise the card would claim 2 runs next to a badge
+// promising 3.
 const plans = [
   {
     name: 'Trial Run',
     price: 70,
     period: '2 sessions',
     description: 'Two 30-minute sessions to help your dog become comfortable with the slat mill.',
-    features: ['2 runs, 30 minutes each', 'Space sessions about one week apart', 'Safe, positive introduction', 'Move to a package when ready'],
+    foundingDescription: 'Three 30-minute sessions to help your dog become comfortable with the slat mill.',
+    sessionCountFeature: '2 runs, 30 minutes each',
+    features: ['Space sessions about one week apart', 'Safe, positive introduction', 'Move to a package when ready'],
     accent: 'bg-[#EAF2FF]',
     popular: false,
   },
@@ -21,7 +26,9 @@ const plans = [
     price: 35,
     period: '1 session',
     description: 'One 30-minute session for an extra workout, occasional exercise, or routine maintenance.',
-    features: ['1 run, 30 minutes', 'Add between packages', 'Occasional exercise option', 'Keep your dog\'s routine going'],
+    foundingDescription: null,
+    sessionCountFeature: '1 run, 30 minutes',
+    features: ['Add between packages', 'Occasional exercise option', 'Keep your dog\'s routine going'],
     accent: 'bg-[#F7FBFF]',
     popular: false,
   },
@@ -30,7 +37,9 @@ const plans = [
     price: 110,
     period: '3 runs',
     description: 'Three 30-minute runs to maintain your dog\'s fitness and overall health.',
-    features: ['3 runs, 30 minutes each', 'Use anytime within one month', 'Great for routine maintenance', 'Flexible scheduling'],
+    foundingDescription: null,
+    sessionCountFeature: '3 runs, 30 minutes each',
+    features: ['Use anytime within one month', 'Great for routine maintenance', 'Flexible scheduling'],
     accent: 'bg-[#FFF7ED]',
     popular: false,
   },
@@ -39,7 +48,9 @@ const plans = [
     price: 200,
     period: '6 runs',
     description: 'Six 30-minute runs for regular cardio, conditioning, weight management, and endurance.',
-    features: ['6 runs, 30 minutes each', 'Use anytime within one month', 'Ideal for regular conditioning', 'Best package value'],
+    foundingDescription: null,
+    sessionCountFeature: '6 runs, 30 minutes each',
+    features: ['Use anytime within one month', 'Ideal for regular conditioning', 'Best package value'],
     accent: 'bg-[#D6E6FF]',
     popular: true,
   },
@@ -176,12 +187,19 @@ export default function BookNow() {
                       )}
                     </div>
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed text-[#315B96]">{plan.description}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-[#315B96]">
+                    {isFoundingActive && plan.foundingDescription ? plan.foundingDescription : plan.description}
+                  </p>
                   <ul className="mt-5 grid gap-2.5">
-                    {isFoundingActive && (
+                    {isFoundingActive ? (
                       <li className="flex items-center gap-2 rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-black text-emerald-700">
                         <Star className="h-4 w-4 shrink-0 fill-emerald-600 text-emerald-600" />
-                        Founding Member bonus: 3 runs for the price of 2
+                        3 runs, 30 minutes each &mdash; for the price of 2
+                      </li>
+                    ) : (
+                      <li className="flex items-center gap-2 text-xs font-semibold text-[#071A3D]">
+                        <Check className="h-4 w-4 shrink-0 text-brand-500" />
+                        {plan.sessionCountFeature}
                       </li>
                     )}
                     {plan.features.map((feature) => (

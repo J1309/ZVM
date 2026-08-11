@@ -100,7 +100,7 @@ export default function Navbar() {
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-center text-xs font-bold text-black bg-gradient-to-r from-amber-400 via-brand-500 to-amber-400 shadow-md">
             <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse fill-black" />
             <span>
-              FOUNDING MEMBER SPECIAL: 1 extra session FREE on your Trial Run &mdash; 3 sessions for $70 + tax
+              FOUNDING MEMBER SPECIAL: 1 extra session FREE on your Trial Run &mdash; 3 sessions for $70
             </span>
             <a href="/#book-now" className="font-black underline transition hover:text-white">Claim Offer &rarr;</a>
           </div>
