@@ -38,7 +38,7 @@ function FounderPortrait() {
     <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-[#D6E6FF] bg-[#EAF2FF] shadow-2xl group">
       {!failed ? (
         <img
-          src="/images/owner_img_new.png"
+          src="/images/new_founder_img.jpeg"
           alt="Megha George, founder of ZoomieVan"
           width={800}
           height={1000}
