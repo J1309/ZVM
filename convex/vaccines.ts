@@ -49,8 +49,35 @@ export const approve = mutation({
   args: { id: v.id("vaccineRecords") },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
-    await ctx.db.patch(args.id, { status: "approved", reviewedBy: admin._id, reviewedAt: Date.now(), updatedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(args.id, { status: "approved", reviewedBy: admin._id, reviewedAt: now, updatedAt: now });
     const record = await ctx.db.get(args.id);
+
+    // Sync to user record if linked
+    if (record?.userId) {
+      const user = await ctx.db.get(record.userId);
+      if (user) {
+        await ctx.db.patch(user._id, {
+          vaccines: {
+            ...user.vaccines,
+            status: "approved",
+            verifiedAt: new Date(now).toISOString(),
+            verifiedBy: admin.name || "Admin",
+          },
+          updatedAt: now,
+        });
+      }
+    }
+
+    await ctx.db.insert("auditEvents", {
+      actorUserId: admin._id,
+      action: "vaccine.approved",
+      entityType: "vaccineRecord",
+      entityId: args.id,
+      metadata: { dogName: record?.dogName, ownerName: record?.ownerName },
+      createdAt: now,
+    });
+
     return vaccineFromDoc(record);
   },
 });
@@ -59,8 +86,35 @@ export const reject = mutation({
   args: { id: v.id("vaccineRecords") },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
-    await ctx.db.patch(args.id, { status: "rejected", reviewedBy: admin._id, reviewedAt: Date.now(), updatedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(args.id, { status: "rejected", reviewedBy: admin._id, reviewedAt: now, updatedAt: now });
     const record = await ctx.db.get(args.id);
+
+    // Sync to user record if linked
+    if (record?.userId) {
+      const user = await ctx.db.get(record.userId);
+      if (user) {
+        await ctx.db.patch(user._id, {
+          vaccines: {
+            ...user.vaccines,
+            status: "rejected",
+            verifiedAt: null,
+            verifiedBy: admin.name || "Admin",
+          },
+          updatedAt: now,
+        });
+      }
+    }
+
+    await ctx.db.insert("auditEvents", {
+      actorUserId: admin._id,
+      action: "vaccine.rejected",
+      entityType: "vaccineRecord",
+      entityId: args.id,
+      metadata: { dogName: record?.dogName, ownerName: record?.ownerName },
+      createdAt: now,
+    });
+
     return vaccineFromDoc(record);
   },
 });

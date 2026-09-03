@@ -291,9 +291,12 @@ export default function UserDashboard() {
   const saveDog = async () => {
     if (!dogForm.name || !dogForm.breed || dogForm.weight <= 0 || dogForm.age <= 0) return;
     setSavingDog(true);
-    await updateUser({ dog: dogForm, vaccines: user.vaccines });
-    setSavingDog(false);
-    setShowDogForm(false);
+    try {
+      await updateUser({ dog: dogForm, vaccines: user.vaccines });
+      setShowDogForm(false);
+    } finally {
+      setSavingDog(false);
+    }
   };
 
   const currentPlan = STRIPE_PLANS.find(p => p.key === selectedPlan)!;
@@ -468,7 +471,11 @@ export default function UserDashboard() {
                 Edit
               </button>
             </div>
-            <p className="text-sm text-white">{`${user.address.line1}, ${user.address.city}, ${user.address.province} ${user.address.postalCode}`}</p>
+            <p className="text-sm text-white">
+              {user.address?.line1
+                ? `${user.address.line1}, ${user.address.city}, ${user.address.province} ${user.address.postalCode}`
+                : 'No address saved yet — click Edit to add'}
+            </p>
           </motion.div>
 
           {/* Dog Card */}

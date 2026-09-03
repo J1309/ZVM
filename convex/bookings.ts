@@ -113,10 +113,10 @@ export const cleanOrphanedBookings = mutation({
 });
 
 // Time slots already held for a date, so the picker can grey them out.
+// Made public so availability can be queried reliably without requiring authentication.
 export const takenSlots = query({
   args: { date: v.string() },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const now = Date.now();
     const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 
@@ -145,6 +145,55 @@ export const takenSlots = query({
     });
 
     return taken.map(b => b.timeSlot as string);
+  },
+});
+
+export const updateStatus = mutation({
+  args: {
+    id: v.id("bookings"),
+    status: v.union(v.literal("completed"), v.literal("cancelled"), v.literal("scheduled"), v.literal("pending_payment")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.id, { status: args.status, updatedAt: Date.now() });
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const createManual = mutation({
+  args: {
+    booking: v.object({
+      vanId: v.optional(v.string()),
+      customerName: v.string(),
+      customerEmail: v.optional(v.string()),
+      customerPhone: v.optional(v.string()),
+      dogName: v.string(),
+      date: v.string(),
+      timeSlot: v.optional(v.string()),
+      planName: v.optional(v.string()),
+      fsa: v.string(),
+      sessionFee: v.number(),
+      surcharge: v.number(),
+      status: v.union(v.literal("completed"), v.literal("cancelled"), v.literal("scheduled"), v.literal("pending_payment")),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const now = Date.now();
+    const id = await ctx.db.insert("bookings", {
+      ...args.booking,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return await ctx.db.get(id);
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("bookings") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.delete(args.id);
   },
 });
 

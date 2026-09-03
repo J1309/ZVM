@@ -51,6 +51,21 @@ export async function getAllBookings(): Promise<Booking[]> {
 }
 
 export async function updateBookingStatus(id: string, status: Booking['status']): Promise<Booking> {
+  if (convex) {
+    await convex.mutation(api.bookings.updateStatus, { id: id as any, status });
+    return {
+      id,
+      vanId: 'VAN-001',
+      fsa: 'T5J',
+      customerName: 'Customer',
+      dogName: 'Dog',
+      date: new Date().toISOString().split('T')[0],
+      sessionFee: 35,
+      surcharge: 0,
+      status,
+      createdAt: new Date().toISOString(),
+    };
+  }
   const bookings = getItem<Booking[]>(KEY) ?? [];
   const index = bookings.findIndex(b => b.id === id);
   if (index !== -1) {
@@ -62,6 +77,25 @@ export async function updateBookingStatus(id: string, status: Booking['status'])
 }
 
 export async function createManualBooking(booking: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> {
+  if (convex) {
+    const created = await convex.mutation(api.bookings.createManual, {
+      booking: {
+        vanId: booking.vanId,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        customerPhone: booking.customerPhone,
+        dogName: booking.dogName,
+        date: booking.date,
+        timeSlot: booking.timeSlot,
+        planName: booking.planName,
+        fsa: booking.fsa,
+        sessionFee: booking.sessionFee,
+        surcharge: booking.surcharge,
+        status: booking.status,
+      },
+    });
+    return { ...booking, id: created._id, createdAt: new Date(created.createdAt).toISOString() };
+  }
   const bookings = getItem<Booking[]>(KEY) ?? [];
   const newBooking: Booking = {
     ...booking,
@@ -74,6 +108,10 @@ export async function createManualBooking(booking: Omit<Booking, 'id' | 'created
 }
 
 export async function deleteBooking(id: string): Promise<void> {
+  if (convex) {
+    await convex.mutation(api.bookings.remove, { id: id as any });
+    return;
+  }
   const bookings = getItem<Booking[]>(KEY) ?? [];
   const filtered = bookings.filter(b => b.id !== id);
   setItem(KEY, filtered);

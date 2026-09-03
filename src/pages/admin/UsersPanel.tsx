@@ -4,7 +4,7 @@ import {
   Users, Search, ChevronDown, Mail, Phone, MapPin, Dog,
   CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save,
   Eye, FileText, Check, XCircle, DollarSign,
-  ExternalLink, FileCheck2, Shield, AlertCircle
+  ExternalLink, FileCheck2, Shield, AlertCircle, Loader2
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUser, deleteUser } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';
@@ -61,6 +61,7 @@ export default function AdminUsersPanel() {
   const [blobDocUrl, setBlobDocUrl] = useState<string | null>(null);
   const [verifyingDoc, setVerifyingDoc] = useState(false);
   const [verifyToast, setVerifyToast] = useState<string | null>(null);
+  const [justApprovedId, setJustApprovedId] = useState<string | null>(null);
 
   // Safely convert PDF data URLs to Blob URLs so Chromium never blocks the iframe
   useEffect(() => {
@@ -236,8 +237,13 @@ export default function AdminUsersPanel() {
           ? `Certificate marked as rejected for ${user.dog?.name || user.name}.`
           : `Certificate status reset to pending for ${user.dog?.name || user.name}.`;
 
+      if (newStatus === 'approved') {
+        setJustApprovedId(user.id);
+        setTimeout(() => setJustApprovedId(null), 3000);
+      }
+
       setVerifyToast(actionText);
-      setTimeout(() => setVerifyToast(null), 3500);
+      setTimeout(() => setVerifyToast(null), 4000);
     } catch (err) {
       console.error('Failed to verify certificate:', err);
     } finally {
@@ -341,17 +347,22 @@ export default function AdminUsersPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Toast Alert */}
+      {/* High-visibility Floating Toast Alert */}
       <AnimatePresence>
         {verifyToast && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-emerald-500 text-black font-bold text-sm rounded-2xl shadow-2xl"
+            initial={{ opacity: 0, y: -25, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -25, scale: 0.95 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3.5 px-6 py-4 bg-emerald-950/95 border-2 border-emerald-400 text-white font-bold text-sm rounded-2xl shadow-2xl shadow-emerald-950/80 backdrop-blur-xl pointer-events-none"
           >
-            <CheckCircle2 className="w-5 h-5 fill-black text-emerald-500" />
-            <span>{verifyToast}</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-bold">{verifyToast}</p>
+              <p className="text-emerald-300/80 text-[11px] font-medium">Health compliance verified · Dog cleared for fitness sessions</p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -923,14 +934,21 @@ export default function AdminUsersPanel() {
                   <div className="mt-4 pt-3 border-t border-dark-700/70 flex flex-wrap items-center justify-between gap-3">
                     <span className="text-xs text-dark-300">Admin Verification Actions:</span>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleVerifyCertificate(viewingUser.user, 'approved')}
-                        disabled={verifyingDoc}
-                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        <Check className="w-4 h-4" />
-                        Verify &amp; Approve
-                      </button>
+                      {viewingUser.user.vaccines?.status === 'approved' ? (
+                        <div className="px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>Approved &amp; Cleared</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleVerifyCertificate(viewingUser.user, 'approved')}
+                          disabled={verifyingDoc}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <Check className="w-4 h-4" />
+                          Verify &amp; Approve
+                        </button>
+                      )}
                       <button
                         onClick={() => handleVerifyCertificate(viewingUser.user, 'rejected')}
                         disabled={verifyingDoc}
@@ -1031,7 +1049,7 @@ export default function AdminUsersPanel() {
           );
 
           return (
-            <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -1137,6 +1155,21 @@ export default function AdminUsersPanel() {
                   )}
                 </div>
 
+                {/* Celebratory Approval In-Modal Banner */}
+                <AnimatePresence>
+                  {justApprovedId === viewingCertUser.id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="p-3 bg-emerald-950/95 border-t border-b border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 text-center shadow-lg"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>✓ Certificate verified &amp; approved! Health clearance is active. Returning to profile...</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Bottom Verification & Exit Controls Bar */}
                 <div className="p-4 border-t border-dark-700 bg-dark-800 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
@@ -1146,22 +1179,42 @@ export default function AdminUsersPanel() {
                     >
                       ← Exit PDF View (Back to Profile)
                     </button>
-                    <span className="text-xs text-dark-300">
-                      Status: <strong className="text-white uppercase">{viewingCertUser.vaccines?.status || 'Pending'}</strong>
-                    </span>
+                    {viewingCertUser.vaccines?.status === 'approved' ? (
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Verified &amp; Approved
+                      </span>
+                    ) : (
+                      <span className="text-xs text-dark-300">
+                        Status: <strong className="text-white uppercase">{viewingCertUser.vaccines?.status || 'Pending'}</strong>
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <button
-                      onClick={async () => {
-                        await handleVerifyCertificate(viewingCertUser, 'approved');
-                      }}
-                      disabled={verifyingDoc}
-                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
-                    >
-                      <Check className="w-4 h-4" />
-                      Verify &amp; Approve
-                    </button>
+                    {viewingCertUser.vaccines?.status === 'approved' ? (
+                      <button
+                        onClick={() => setViewingCertUser(null)}
+                        className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20"
+                      >
+                        <Check className="w-4 h-4" />
+                        ✓ Done (Return to Profile)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          await handleVerifyCertificate(viewingCertUser, 'approved');
+                          setTimeout(() => {
+                            setViewingCertUser(null);
+                          }, 1400);
+                        }}
+                        disabled={verifyingDoc}
+                        className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                      >
+                        {verifyingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        Verify &amp; Approve
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
                         await handleVerifyCertificate(viewingCertUser, 'rejected');
