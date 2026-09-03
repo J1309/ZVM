@@ -143,21 +143,76 @@ export default function UserDashboard() {
     }
   };
 
+  const readDocumentFile = async (file: File): Promise<{ dataUrl: string; docType: 'pdf' | 'image' }> => {
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ dataUrl: reader.result as string, docType: 'pdf' });
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rawUrl = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), docType: 'image' });
+          } else {
+            resolve({ dataUrl: rawUrl, docType: 'image' });
+          }
+        };
+        img.onerror = () => resolve({ dataUrl: rawUrl, docType: 'image' });
+        img.src = rawUrl;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileUpload = async (file: File) => {
     if (!file || !user) return;
     setIsUploadingDoc(true);
     setDocUploadSuccess(null);
 
     try {
-      await new Promise(r => setTimeout(r, 600));
       const fileName = file.name;
+      const { dataUrl, docType } = await readDocumentFile(file);
+
+      const updatedVaccines = {
+        ...user.vaccines,
+        rabiesFileName: fileName,
+        dhppFileName: fileName,
+        documentUrl: dataUrl,
+        documentType: docType,
+        status: 'pending' as const,
+        verifiedAt: null,
+        verifiedBy: null,
+      };
 
       await updateUser({
-        vaccines: {
-          ...user.vaccines,
-          rabiesFileName: fileName,
-          dhppFileName: fileName,
-        },
+        vaccines: updatedVaccines,
       });
 
       await addVaccine({

@@ -95,6 +95,7 @@ export interface UserVaccines {
   verifiedAt?: string | null;
   verifiedBy?: string | null;
   documentUrl?: string | null;
+  documentType?: 'pdf' | 'image' | string;
 }
 
 export interface Payment {

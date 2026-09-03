@@ -4,7 +4,7 @@ import {
   Users, Search, ChevronDown, Mail, Phone, MapPin, Dog,
   CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save,
   Eye, FileText, Check, XCircle, DollarSign,
-  ExternalLink, FileCheck2, Shield
+  ExternalLink, FileCheck2, Shield, Upload
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUser, deleteUser } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';
@@ -197,6 +197,82 @@ export default function AdminUsersPanel() {
       setTimeout(() => setVerifyToast(null), 3500);
     } catch (err) {
       console.error('Failed to verify certificate:', err);
+    } finally {
+      setVerifyingDoc(false);
+    }
+  };
+
+  const handleAdminAttachDocument = async (user: User, file: File) => {
+    setVerifyingDoc(true);
+    try {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      let dataUrl: string;
+      const docType = isPdf ? 'pdf' : 'image';
+
+      if (isPdf) {
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } else {
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const rawUrl = reader.result as string;
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const maxDim = 1200;
+              let width = img.width;
+              let height = img.height;
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+              } else {
+                resolve(rawUrl);
+              }
+            };
+            img.onerror = () => resolve(rawUrl);
+            img.src = rawUrl;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const updatedVaccines = {
+        ...user.vaccines,
+        rabiesFileName: file.name,
+        dhppFileName: file.name,
+        documentUrl: dataUrl,
+        documentType: docType,
+        status: 'pending' as const,
+      };
+
+      await updateUser(user.id, { vaccines: updatedVaccines });
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, vaccines: updatedVaccines } : u));
+      if (viewingUser && viewingUser.user.id === user.id) {
+        setViewingUser({ ...viewingUser, user: { ...viewingUser.user, vaccines: updatedVaccines } });
+      }
+      setViewingCertUser({ ...user, vaccines: updatedVaccines });
+      setVerifyToast(`Attached "${file.name}" to ${user.name}'s dog record.`);
+      setTimeout(() => setVerifyToast(null), 3500);
+    } catch (err) {
+      console.error('Failed to attach document:', err);
     } finally {
       setVerifyingDoc(false);
     }
@@ -942,151 +1018,147 @@ export default function AdminUsersPanel() {
       </AnimatePresence>
 
       {/* ========================================================================= */}
-      {/* 📜 CERTIFICATE DOCUMENT INSPECTION VIEWER MODAL                          */}
+      {/* 📜 REAL CERTIFICATE & PDF DOCUMENT VIEWER MODAL                          */}
       {/* ========================================================================= */}
       <AnimatePresence>
         {viewingCertUser && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-dark-900 border border-dark-600 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl my-auto flex flex-col"
+              className="bg-dark-900 border border-dark-600 rounded-3xl w-full max-w-4xl max-h-[94vh] overflow-hidden shadow-2xl my-auto flex flex-col"
             >
-              {/* Certificate Viewer Top Bar */}
-              <div className="p-4 border-b border-dark-700 bg-dark-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-brand-400" />
-                  <h4 className="font-display font-bold text-base text-white">
-                    Canine Health &amp; Vaccination Certificate
-                  </h4>
-                </div>
-                <button
-                  onClick={() => setViewingCertUser(null)}
-                  className="p-1 rounded-lg text-dark-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Certificate Document Canvas */}
-              <div className="p-6 bg-gradient-to-b from-[#0b1329] via-[#091024] to-[#0b1329] space-y-5 text-dark-200">
-                {/* Formal Certificate Header */}
-                <div className="text-center border-b-2 border-brand-500/40 pb-4 relative">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[11px] font-bold uppercase tracking-widest mb-2">
-                    Official Veterinary Record
+              {/* Top Navigation Bar */}
+              <div className="p-4 border-b border-dark-700 bg-dark-800 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-xl bg-brand-500/10 text-brand-400 shrink-0">
+                    <FileText className="w-5 h-5" />
                   </div>
-                  <h2 className="font-display font-black text-2xl text-white tracking-wide">
-                    CANINE IMMUNIZATION CERTIFICATE
-                  </h2>
-                  <p className="text-xs text-dark-400 mt-1">
-                    City of Edmonton Compliant Mobile Dog Fitness Health Verification
-                  </p>
-
-                  {/* Verification Watermark Badge */}
-                  {viewingCertUser.vaccines?.status === 'approved' && (
-                    <div className="absolute top-0 right-0 transform rotate-12 border-2 border-emerald-400 text-emerald-400 px-3 py-1 rounded-lg font-black text-xs uppercase tracking-widest bg-emerald-500/10 shadow-lg">
-                      ✓ VERIFIED APPROVED
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-display font-bold text-base text-white truncate">
+                        {viewingCertUser.vaccines?.rabiesFileName || 'Canine Vaccination Certificate'}
+                      </h4>
+                      <span className="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                        {viewingCertUser.vaccines?.documentType === 'pdf' ? 'PDF Document' : 'Image / Document'}
+                      </span>
                     </div>
+                    <p className="text-xs text-dark-300 truncate">
+                      Patient: <strong className="text-white">{viewingCertUser.dog?.name || 'Dog'}</strong> ({viewingCertUser.dog?.breed || 'Canine'}) · Owner: {viewingCertUser.name}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {viewingCertUser.vaccines?.documentUrl && (
+                    <a
+                      href={viewingCertUser.vaccines.documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-semibold text-white flex items-center gap-1.5 transition"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Open in New Tab</span>
+                    </a>
                   )}
-                </div>
-
-                {/* Patient & Owner Info Table */}
-                <div className="grid grid-cols-2 gap-4 text-xs bg-dark-800/60 p-4 rounded-2xl border border-dark-700/80">
-                  <div>
-                    <p className="text-dark-400 font-bold uppercase text-[10px]">Patient (Dog) Information</p>
-                    <p className="text-white font-black text-base mt-0.5">{viewingCertUser.dog?.name || 'Canine'}</p>
-                    <p className="text-dark-300 mt-0.5">Breed: {viewingCertUser.dog?.breed || 'Standard'}</p>
-                    <p className="text-dark-300">Age: {viewingCertUser.dog?.age || 3} years · Weight: {viewingCertUser.dog?.weight || 30} lbs</p>
-                  </div>
-
-                  <div>
-                    <p className="text-dark-400 font-bold uppercase text-[10px]">Owner Information</p>
-                    <p className="text-white font-bold text-sm mt-0.5">{viewingCertUser.name}</p>
-                    <p className="text-dark-300 mt-0.5">Phone: {viewingCertUser.phone || 'On file'}</p>
-                    <p className="text-dark-300 truncate">Address: {viewingCertUser.address?.line1 || 'Edmonton, AB'}</p>
-                  </div>
-                </div>
-
-                {/* Vaccines Table */}
-                <div className="bg-dark-800/60 rounded-2xl border border-dark-700/80 overflow-hidden text-xs">
-                  <div className="grid grid-cols-3 p-3 bg-dark-750 font-bold text-dark-300 uppercase text-[10px] border-b border-dark-700">
-                    <span>Vaccine Name</span>
-                    <span>Status / Record</span>
-                    <span className="text-right">Compliance</span>
-                  </div>
-                  <div className="grid grid-cols-3 p-3 border-b border-dark-700/60 items-center">
-                    <div>
-                      <p className="font-bold text-white">Rabies Virus</p>
-                      <p className="text-[10px] text-dark-400">Core Canine 3-Year</p>
-                    </div>
-                    <div>
-                      <span className="text-emerald-400 font-bold">Administered &amp; Valid</span>
-                      <p className="text-[10px] text-dark-400">{viewingCertUser.vaccines?.rabiesFileName || 'rabies_record.pdf'}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md">COMPLIANT</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 p-3 items-center">
-                    <div>
-                      <p className="font-bold text-white">DHPP Combination</p>
-                      <p className="text-[10px] text-dark-400">Distemper, Hepatitis, Parvo</p>
-                    </div>
-                    <div>
-                      <span className="text-emerald-400 font-bold">Administered &amp; Valid</span>
-                      <p className="text-[10px] text-dark-400">{viewingCertUser.vaccines?.dhppFileName || 'dhpp_record.pdf'}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md">COMPLIANT</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Veterinarian Endorsement */}
-                <div className="p-3.5 bg-dark-800/40 rounded-xl border border-dark-700/60 text-xs flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] text-dark-400 uppercase font-bold">Authorized Veterinary Clinic</p>
-                    <p className="text-white font-bold mt-0.5">
-                      {viewingCertUser.vaccines?.vetName || 'Edmonton Companion Animal Hospital'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-dark-400 uppercase font-bold">Emergency Phone</p>
-                    <p className="text-white font-bold mt-0.5">
-                      {viewingCertUser.vaccines?.vetPhone || '(780) 434-2222'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Certificate Viewer Actions */}
-              <div className="p-4 border-t border-dark-700 bg-dark-800 flex items-center justify-between gap-3">
-                <span className="text-xs text-dark-400">
-                  Status: <strong className="text-white uppercase">{viewingCertUser.vaccines?.status || 'Pending'}</strong>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleVerifyCertificate(viewingCertUser, 'approved')}
-                    disabled={verifyingDoc}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
-                  >
-                    <Check className="w-4 h-4" />
-                    Approve Certificate
-                  </button>
-                  <button
-                    onClick={() => handleVerifyCertificate(viewingCertUser, 'rejected')}
-                    disabled={verifyingDoc}
-                    className="px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 text-xs font-bold transition flex items-center gap-1.5"
-                  >
-                    <X className="w-4 h-4" />
-                    Reject
-                  </button>
                   <button
                     onClick={() => setViewingCertUser(null)}
-                    className="px-4 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-bold text-white transition"
+                    className="px-3 py-1.5 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-bold text-dark-300 hover:text-white flex items-center gap-1.5 transition"
+                    title="Exit PDF View"
                   >
-                    Close
+                    <X className="w-4 h-4" />
+                    <span>Exit PDF View</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Document Viewing Area */}
+              <div className="p-4 sm:p-6 bg-dark-950 flex-1 overflow-auto flex flex-col items-center justify-center min-h-[50vh] max-h-[70vh]">
+                {viewingCertUser.vaccines?.documentUrl ? (
+                  viewingCertUser.vaccines.documentType === 'pdf' || viewingCertUser.vaccines.documentUrl.startsWith('data:application/pdf') || viewingCertUser.vaccines.rabiesFileName?.toLowerCase().endsWith('.pdf') ? (
+                    <div className="w-full h-full min-h-[62vh] rounded-2xl overflow-hidden border border-dark-700 bg-white shadow-xl">
+                      <iframe
+                        src={viewingCertUser.vaccines.documentUrl}
+                        className="w-full h-full border-0"
+                        title="Vaccine Certificate PDF"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                      <img
+                        src={viewingCertUser.vaccines.documentUrl}
+                        alt={`Vaccination Document for ${viewingCertUser.dog?.name}`}
+                        className="max-h-[62vh] max-w-full rounded-2xl object-contain shadow-2xl border border-dark-700"
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className="text-center p-8 max-w-md bg-dark-900/90 rounded-2xl border border-dark-700 space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center mx-auto">
+                      <FileText className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h5 className="text-base font-bold text-white">No Document File Stored Yet</h5>
+                      <p className="text-xs text-dark-300 mt-1 leading-relaxed">
+                        File recorded: <code className="text-brand-300">{viewingCertUser.vaccines?.rabiesFileName || 'rabies_dhpp_certificate.pdf'}</code>.
+                        <br />
+                        This test account was registered prior to real document file capture. You can attach a real PDF or photo document below to test viewing:
+                      </p>
+                    </div>
+
+                    <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-white font-bold text-xs cursor-pointer shadow-lg shadow-brand-500/20 transition">
+                      <Upload className="w-4 h-4" />
+                      Attach Real Document (PDF / JPG / PNG)
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        className="hidden"
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            await handleAdminAttachDocument(viewingCertUser, e.target.files[0]);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Verification & Exit Controls Bar */}
+              <div className="p-4 border-t border-dark-700 bg-dark-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                  <button
+                    onClick={() => setViewingCertUser(null)}
+                    className="px-4 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-bold text-white transition flex items-center gap-1.5"
+                  >
+                    ← Exit PDF View (Back to Profile)
+                  </button>
+                  <span className="text-xs text-dark-300">
+                    Current Status: <strong className="text-white uppercase">{viewingCertUser.vaccines?.status || 'Pending'}</strong>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    onClick={async () => {
+                      await handleVerifyCertificate(viewingCertUser, 'approved');
+                    }}
+                    disabled={verifyingDoc}
+                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                  >
+                    <Check className="w-4 h-4" />
+                    Verify &amp; Approve
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await handleVerifyCertificate(viewingCertUser, 'rejected');
+                    }}
+                    disabled={verifyingDoc}
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <X className="w-4 h-4" />
+                    Reject Certificate
                   </button>
                 </div>
               </div>
