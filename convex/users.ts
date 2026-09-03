@@ -25,6 +25,12 @@ const vaccines = v.object({
   dhppFileName: v.string(),
   vetName: v.string(),
   vetPhone: v.string(),
+  status: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))),
+  verifiedAt: v.optional(v.union(v.string(), v.null())),
+  verifiedBy: v.optional(v.union(v.string(), v.null())),
+  documentUrl: v.optional(v.union(v.string(), v.null())),
+  documentType: v.optional(v.union(v.string(), v.null())),
+  storageId: v.optional(v.union(v.string(), v.null())),
 });
 
 const userPatch = {
@@ -69,6 +75,12 @@ function cleanVaccines(value: typeof vaccines.type) {
     dhppFileName: text(value.dhppFileName, 180, "DHPP file name"),
     vetName: text(value.vetName, 120, "Veterinarian name"),
     vetPhone: text(value.vetPhone, 40, "Veterinarian phone"),
+    status: value.status || "pending",
+    verifiedAt: value.verifiedAt ?? null,
+    verifiedBy: value.verifiedBy ?? null,
+    documentUrl: value.documentUrl ?? null,
+    documentType: value.documentType ?? null,
+    storageId: value.storageId ?? null,
   };
 }
 
@@ -163,6 +175,14 @@ export const getOrCreateCurrent = mutation({
   },
 });
 
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireUser(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 export const update = mutation({
   args: {
     id: v.id("users"),
@@ -170,17 +190,62 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     await requireSelfOrAdmin(ctx, args.id);
-    if (!(await ctx.db.get(args.id))) throw new Error("User not found.");
+    const user = await ctx.db.get(args.id);
+    if (!user) throw new Error("User not found.");
+
+    const now = Date.now();
+    let cleanedVaccines = args.updates.vaccines ? cleanVaccines(args.updates.vaccines) : undefined;
+    if (cleanedVaccines && cleanedVaccines.storageId) {
+      try {
+        const fileUrl = await ctx.storage.getUrl(cleanedVaccines.storageId as any);
+        if (fileUrl) {
+          cleanedVaccines.documentUrl = fileUrl;
+        }
+      } catch (err) {
+        console.warn("Could not resolve storage URL:", err);
+      }
+    }
 
     const updates = {
       ...(args.updates.name !== undefined && { name: text(args.updates.name, 120, "Name") }),
       ...(args.updates.phone !== undefined && { phone: text(args.updates.phone, 40, "Phone") }),
       ...(args.updates.address && { address: cleanAddress(args.updates.address) }),
       ...(args.updates.dog && { dog: cleanDog(args.updates.dog) }),
-      ...(args.updates.vaccines && { vaccines: cleanVaccines(args.updates.vaccines) }),
-      updatedAt: Date.now(),
+      ...(cleanedVaccines && { vaccines: cleanedVaccines }),
+      updatedAt: now,
     };
     await ctx.db.patch(args.id, updates);
+
+    // If vaccines were updated with a certificate, also ensure vaccineRecords queue has it
+    if (cleanedVaccines && (cleanedVaccines.rabiesFileName || cleanedVaccines.documentUrl)) {
+      const existingRecord = await ctx.db
+        .query("vaccineRecords")
+        .withIndex("by_user", q => q.eq("userId", args.id))
+        .first();
+
+      const recordData = {
+        userId: args.id,
+        dogName: (args.updates.dog?.name || user.dog?.name || "Dog"),
+        ownerName: (args.updates.name || user.name),
+        vaccineType: `Rabies + DHPP (${cleanedVaccines.rabiesFileName || "certificate"})`,
+        submittedAt: now,
+        status: cleanedVaccines.status || "pending",
+        documentUrl: cleanedVaccines.documentUrl || undefined,
+        documentType: cleanedVaccines.documentType || undefined,
+        storageId: cleanedVaccines.storageId || undefined,
+        updatedAt: now,
+      };
+
+      if (existingRecord) {
+        await ctx.db.patch(existingRecord._id, recordData);
+      } else {
+        await ctx.db.insert("vaccineRecords", {
+          ...recordData,
+          createdAt: now,
+        });
+      }
+    }
+
     return userFromDoc(await ctx.db.get(args.id));
   },
 });

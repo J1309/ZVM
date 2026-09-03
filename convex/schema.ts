@@ -27,6 +27,12 @@ const vaccineProfile = v.object({
   dhppFileName: v.string(),
   vetName: v.string(),
   vetPhone: v.string(),
+  status: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))),
+  verifiedAt: v.optional(v.union(v.string(), v.null())),
+  verifiedBy: v.optional(v.union(v.string(), v.null())),
+  documentUrl: v.optional(v.union(v.string(), v.null())),
+  documentType: v.optional(v.union(v.string(), v.null())),
+  storageId: v.optional(v.union(v.string(), v.null())),
 });
 
 export default defineSchema({
@@ -82,6 +88,9 @@ export default defineSchema({
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
     reviewedBy: v.optional(v.id("users")),
     reviewedAt: v.optional(v.number()),
+    documentUrl: v.optional(v.string()),
+    documentType: v.optional(v.string()),
+    storageId: v.optional(v.string()),
     ...timestampFields,
   })
     .index("by_user", ["userId"])

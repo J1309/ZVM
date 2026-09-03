@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2, Sparkles, Star, Clock, PhoneCall } from 'lucide-react';
+import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2, Sparkles, Star, Clock, PhoneCall, AlertCircle, ExternalLink } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
 import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 import { isFullLaunchActive, getTimeUntilLaunch, CountdownState, LAUNCH_TIME_LABEL_CANADIAN } from '../lib/launchConfig';
+import { convex, api } from '../lib/convexClient';
 import PickupWindowPicker from '../components/PickupWindowPicker';
-import { addVaccine } from '../lib/repositories/vaccineRepository';
 
 const CURRENT_LEGAL_VERSION = '2026-07-14';
 const emptyDog: UserDog = { name: '', breed: '', weight: 0, age: 0, energyLevel: '', reactivityNotes: '' };
@@ -40,6 +40,7 @@ export default function UserDashboard() {
   const [savingConsent, setSavingConsent] = useState(false);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [docUploadSuccess, setDocUploadSuccess] = useState<string | null>(null);
+  const [docUploadError, setDocUploadError] = useState<string | null>(null);
   const [agreementScrolled, setAgreementScrolled] = useState(false);
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [submittingAgreement, setSubmittingAgreement] = useState(false);
@@ -215,19 +216,54 @@ export default function UserDashboard() {
 
   const handleFileUpload = async (file: File) => {
     if (!file || !user) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      setDocUploadError('File size is too large (maximum 20MB). Please select a smaller file.');
+      return;
+    }
+
     setIsUploadingDoc(true);
     setDocUploadSuccess(null);
+    setDocUploadError(null);
 
     try {
       const fileName = file.name;
-      const { dataUrl, docType } = await readDocumentFile(file);
+      const isPdf = file.type === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
+      const docType = isPdf ? 'pdf' : 'image';
+      let storageId: string | null = null;
+      let dataUrl: string | null = null;
+
+      // 1. Try Convex direct file storage first (handles up to 50MB)
+      if (convex) {
+        try {
+          const uploadUrl = await convex.mutation(api.users.generateUploadUrl, {});
+          const uploadRes = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': file.type || (isPdf ? 'application/pdf' : 'image/jpeg') },
+            body: file,
+          });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            storageId = data.storageId;
+          }
+        } catch (storageErr) {
+          console.warn('Direct storage upload failed, falling back to data URL:', storageErr);
+        }
+      }
+
+      // 2. If storageId wasn't obtained, fall back to compressed data URL
+      if (!storageId) {
+        const fileData = await readDocumentFile(file);
+        dataUrl = fileData.dataUrl;
+      }
 
       const updatedVaccines = {
         ...user.vaccines,
         rabiesFileName: fileName,
         dhppFileName: fileName,
-        documentUrl: dataUrl,
+        documentUrl: dataUrl || user.vaccines?.documentUrl || null,
         documentType: docType,
+        storageId: storageId || undefined,
         status: 'pending' as const,
         verifiedAt: null,
         verifiedBy: null,
@@ -237,15 +273,10 @@ export default function UserDashboard() {
         vaccines: updatedVaccines,
       });
 
-      await addVaccine({
-        dogName: user.dog.name || 'Dog',
-        ownerName: user.name,
-        vaccineType: `Rabies + DHPP (${fileName})`,
-      });
-
-      setDocUploadSuccess(`Successfully uploaded "${fileName}". Sent for admin review.`);
-    } catch (err) {
+      setDocUploadSuccess(`Successfully uploaded "${fileName}". Sent for admin verification.`);
+    } catch (err: any) {
       console.error('Failed to upload document:', err);
+      setDocUploadError(err?.message || 'Failed to upload certificate. Please try again.');
     } finally {
       setIsUploadingDoc(false);
     }
@@ -503,11 +534,17 @@ export default function UserDashboard() {
             className="hidden"
           />
 
-          {/* Upload Status Alert */}
+          {/* Upload Status Alerts */}
           {docUploadSuccess && (
             <p className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs font-semibold text-emerald-200 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
               {docUploadSuccess}
+            </p>
+          )}
+          {docUploadError && (
+            <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs font-semibold text-red-200 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              {docUploadError}
             </p>
           )}
 
@@ -519,35 +556,69 @@ export default function UserDashboard() {
             {isUploadingDoc ? (
               <div className="flex flex-col items-center justify-center py-4 text-brand-400">
                 <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                <p className="text-sm font-semibold">Uploading document...</p>
+                <p className="text-sm font-semibold">Uploading and processing document...</p>
+                <p className="text-xs text-dark-400 mt-1">Please wait while the certificate is stored.</p>
               </div>
-            ) : user.vaccines.rabiesFileName ? (
+            ) : user.vaccines?.rabiesFileName ? (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 text-left">
-                  <div className="p-3 rounded-lg bg-brand-500/10 text-brand-400">
+                  <div className="p-3 rounded-lg bg-brand-500/10 text-brand-400 shrink-0">
                     <FileText className="h-6 w-6" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">{user.vaccines.rabiesFileName}</p>
-                    <p className="text-xs text-dark-400">Status: Sent for Admin Verification</p>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-white break-all">{user.vaccines.rabiesFileName}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {user.vaccines.status === 'approved' ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          ✓ Verified &amp; Approved
+                        </span>
+                      ) : user.vaccines.status === 'rejected' ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                          ✕ Rejected — Please Re-upload
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          ⏳ Sent for Admin Verification
+                        </span>
+                      )}
+                      {user.vaccines.documentType && (
+                        <span className="text-[10px] uppercase font-bold text-dark-400">
+                          {user.vaccines.documentType}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl bg-dark-700 px-4 py-2 text-xs font-bold text-white hover:bg-dark-600 transition"
-                >
-                  <Upload className="h-3.5 w-3.5" /> Replace Document
-                </button>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {user.vaccines.documentUrl && (
+                    <a
+                      href={user.vaccines.documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-brand-500/15 hover:bg-brand-500/25 border border-brand-500/30 px-3 py-2 text-xs font-bold text-brand-300 transition"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> View File
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-dark-700 px-4 py-2 text-xs font-bold text-white hover:bg-dark-600 transition"
+                  >
+                    <Upload className="h-3.5 w-3.5" /> Replace File
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center py-3 text-dark-300">
                 <Upload className="h-8 w-8 text-brand-400 mb-2" />
                 <p className="text-sm font-bold text-white">Click or drag file to upload vaccine record</p>
-                <p className="text-xs text-dark-400 mt-1">Supports PDF, PNG, JPG (Max 10MB)</p>
+                <p className="text-xs text-dark-400 mt-1">Supports PDF, PNG, JPG (Max 20MB)</p>
               </div>
             )}
           </div>
