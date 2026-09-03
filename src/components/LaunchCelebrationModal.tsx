@@ -207,7 +207,7 @@ export default function LaunchCelebrationModal({ forceOpen, onClose }: LaunchCel
                   </div>
                   <div className="flex justify-between text-[9px] text-dark-400 mt-1 font-semibold">
                     <span>{claimed} Claimed</span>
-                    <span>Max 50 Members (Auto-Capping)</span>
+                    <span>50 Spots Total</span>
                   </div>
                 </div>
               </div>
