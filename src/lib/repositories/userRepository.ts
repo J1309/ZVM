@@ -74,7 +74,34 @@ export async function acceptLegal(): Promise<User> {
   return convex.mutation(api.users.acceptLegal, {});
 }
 
+export async function submitProfile(): Promise<User> {
+  if (convex) return convex.mutation(api.users.submitProfile, {});
+  const id = sessionStorage.getItem('zoomievan_session');
+  if (!id) throw new Error('Not logged in');
+  return updateUser(id, { profileCompleted: true, profileSubmittedAt: new Date().toISOString() });
+}
+
+export async function verifyAccount(userId: string, verified: boolean): Promise<User | null> {
+  if (convex) return convex.mutation(api.users.verifyAccount, { userId: userId as any, verified });
+  return updateUser(userId, {
+    accountVerified: verified,
+    accountVerifiedAt: verified ? new Date().toISOString() : null,
+    accountVerifiedBy: verified ? 'Admin' : null,
+  });
+}
+
+export async function deleteSelf(): Promise<{ success: boolean }> {
+  if (convex) return convex.mutation(api.users.deleteSelf, {});
+  const id = sessionStorage.getItem('zoomievan_session');
+  if (id) await deleteUser(id);
+  return { success: true };
+}
+
 export async function deleteUser(id: string): Promise<void> {
+  if (convex) {
+    await convex.mutation(api.users.remove, { id: id as any });
+    return;
+  }
   const users = getItem<User[]>(KEY) ?? [];
   const filtered = users.filter(user => user.id !== id);
   setItem(KEY, filtered);

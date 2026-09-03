@@ -6,7 +6,7 @@ import {
   Eye, FileText, Check, XCircle, DollarSign,
   ExternalLink, FileCheck2, Shield, AlertCircle, Loader2
 } from 'lucide-react';
-import { getAllUsers, createUser, updateUser, deleteUser } from '../../lib/repositories/userRepository';
+import { getAllUsers, createUser, updateUser, deleteUser, verifyAccount } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';
 import { getAllVaccines, approveVaccine, rejectVaccine, addVaccine } from '../../lib/repositories/vaccineRepository';
 import { User, Payment, VaccineRecord } from '../../lib/types';
@@ -246,6 +246,43 @@ export default function AdminUsersPanel() {
       setTimeout(() => setVerifyToast(null), 4000);
     } catch (err) {
       console.error('Failed to verify certificate:', err);
+    } finally {
+      setVerifyingDoc(false);
+    }
+  };
+
+  // Account Verification Handler (Approves or Revokes customer account clearance)
+  const handleVerifyAccount = async (user: User, verified: boolean) => {
+    setVerifyingDoc(true);
+    try {
+      await verifyAccount(user.id, verified);
+      const nowIso = new Date().toISOString();
+      const updatedUser: User = {
+        ...user,
+        accountVerified: verified,
+        accountVerifiedAt: verified ? nowIso : null,
+        accountVerifiedBy: verified ? 'Admin' : null,
+      };
+
+      setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+      if (viewingUser && viewingUser.user.id === user.id) {
+        setViewingUser({
+          ...viewingUser,
+          user: updatedUser,
+        });
+      }
+      if (viewingCertUser && viewingCertUser.id === user.id) {
+        setViewingCertUser(updatedUser);
+      }
+
+      const msg = verified
+        ? `Account verified & cleared for ${user.name}! Customer can now book and pay.`
+        : `Account verification revoked for ${user.name}.`;
+      setVerifyToast(msg);
+      setTimeout(() => setVerifyToast(null), 4000);
+    } catch (err) {
+      console.error('Failed to verify account:', err);
+      alert('Failed to update account verification.');
     } finally {
       setVerifyingDoc(false);
     }
@@ -498,6 +535,25 @@ export default function AdminUsersPanel() {
                         )}
                         <span>{cert.label}</span>
                       </span>
+                    </div>
+
+                    {/* Account Clearance Pill */}
+                    <div className="hidden lg:flex items-center shrink-0">
+                      {user.accountVerified ? (
+                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Account Cleared</span>
+                        </span>
+                      ) : user.profileCompleted ? (
+                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Needs Clearance</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 text-xs rounded-xl bg-dark-750 text-dark-400 border border-dark-700">
+                          Incomplete Profile
+                        </span>
+                      )}
                     </div>
 
                     {/* Plan Badge */}
@@ -968,6 +1024,108 @@ export default function AdminUsersPanel() {
                   </div>
                 </div>
 
+                {/* 3b. 🛡️ ACCOUNT VERIFICATION & BOOKING CLEARANCE */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-dark-800 to-dark-750 border border-emerald-500/30 shadow-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 border-b border-dark-700 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${viewingUser.user.accountVerified ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">Account Clearance &amp; Booking Permission</h4>
+                        <p className="text-[11px] text-dark-300">Controls whether this customer is permitted to finalize bookings and pay</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      {viewingUser.user.accountVerified ? (
+                        <span className="px-3 py-1 text-xs font-black uppercase tracking-wider rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          Account Verified &amp; Cleared
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 text-xs font-black uppercase tracking-wider rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          Awaiting Verification
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-dark-900/80 rounded-xl border border-dark-700 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                      <span className="text-dark-400">Profile Submission Status:</span>
+                      <span className="font-semibold text-white">
+                        {viewingUser.user.profileCompleted ? (
+                          <span className="text-emerald-300 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            Completed &amp; Submitted {viewingUser.user.profileSubmittedAt ? `(${new Date(viewingUser.user.profileSubmittedAt).toLocaleDateString()})` : ''}
+                          </span>
+                        ) : (
+                          <span className="text-dark-400">Not yet submitted by customer</span>
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                      <span className="text-dark-400">Booking &amp; Stripe Checkout Gate:</span>
+                      <span className={`font-bold ${viewingUser.user.accountVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {viewingUser.user.accountVerified ? 'Unlocked (Customer can pick sessions and pay)' : 'Locked (Account verification required)'}
+                      </span>
+                    </div>
+
+                    {viewingUser.user.accountVerified && viewingUser.user.accountVerifiedAt && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                        <span className="text-dark-400">Cleared By:</span>
+                        <span className="text-dark-300">
+                          {viewingUser.user.accountVerifiedBy || 'Admin'} on {new Date(viewingUser.user.accountVerifiedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Admin Verification Buttons */}
+                  <div className="mt-3 pt-3 border-t border-dark-700/70 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-dark-300">Account Status Controls:</span>
+                    <div className="flex items-center gap-2">
+                      {viewingUser.user.accountVerified ? (
+                        <button
+                          onClick={() => handleVerifyAccount(viewingUser.user, false)}
+                          disabled={verifyingDoc}
+                          className="px-4 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-amber-300 border border-amber-500/20 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          Revoke Clearance
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleVerifyAccount(viewingUser.user, true)}
+                            disabled={verifyingDoc}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/25 flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Verify &amp; Approve Account
+                          </button>
+                          {viewingUser.user.vaccines?.status !== 'approved' && (
+                            <button
+                              onClick={async () => {
+                                await handleVerifyCertificate(viewingUser.user, 'approved');
+                                await handleVerifyAccount(viewingUser.user, true);
+                              }}
+                              disabled={verifyingDoc}
+                              className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-bold transition shadow-lg shadow-brand-500/25 flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Approve Cert &amp; Account
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* 4. Purchase & Subscription History */}
                 <div className="p-4 rounded-2xl bg-dark-800/80 border border-dark-700/80">
                   <div className="flex items-center justify-between mb-3 border-b border-dark-700/60 pb-2">
@@ -1191,7 +1349,23 @@ export default function AdminUsersPanel() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                    {!viewingCertUser.accountVerified && (
+                      <button
+                        onClick={async () => {
+                          await handleVerifyCertificate(viewingCertUser, 'approved');
+                          await handleVerifyAccount(viewingCertUser, true);
+                          setTimeout(() => {
+                            setViewingCertUser(null);
+                          }, 1400);
+                        }}
+                        disabled={verifyingDoc}
+                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-brand-500/20 disabled:opacity-50"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Verify Cert &amp; Clear Account
+                      </button>
+                    )}
                     {viewingCertUser.vaccines?.status === 'approved' ? (
                       <button
                         onClick={() => setViewingCertUser(null)}
@@ -1212,7 +1386,7 @@ export default function AdminUsersPanel() {
                         className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
                       >
                         {verifyingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        Verify &amp; Approve
+                        Verify &amp; Approve Cert
                       </button>
                     )}
                     <button

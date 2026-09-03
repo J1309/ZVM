@@ -39,6 +39,11 @@ const userPatch = {
   address: v.optional(address),
   dog: v.optional(dog),
   vaccines: v.optional(vaccines),
+  profileCompleted: v.optional(v.boolean()),
+  profileSubmittedAt: v.optional(v.union(v.number(), v.null())),
+  accountVerified: v.optional(v.boolean()),
+  accountVerifiedAt: v.optional(v.union(v.number(), v.null())),
+  accountVerifiedBy: v.optional(v.union(v.string(), v.null())),
 };
 
 function text(value: string, max: number, label: string) {
@@ -98,6 +103,11 @@ function userFromDoc(doc: any) {
     legalAccepted: doc.legalAccepted,
     legalAcceptedAt: doc.legalAcceptedAt ? new Date(doc.legalAcceptedAt).toISOString() : null,
     legalVersion: doc.legalVersion,
+    profileCompleted: doc.profileCompleted ?? false,
+    profileSubmittedAt: doc.profileSubmittedAt ? new Date(doc.profileSubmittedAt).toISOString() : null,
+    accountVerified: doc.accountVerified ?? false,
+    accountVerifiedAt: doc.accountVerifiedAt ? new Date(doc.accountVerifiedAt).toISOString() : null,
+    accountVerifiedBy: doc.accountVerifiedBy ?? null,
     createdAt: new Date(doc.createdAt).toISOString(),
   };
 }
@@ -212,6 +222,11 @@ export const update = mutation({
       ...(args.updates.address && { address: cleanAddress(args.updates.address) }),
       ...(args.updates.dog && { dog: cleanDog(args.updates.dog) }),
       ...(cleanedVaccines && { vaccines: cleanedVaccines }),
+      ...(args.updates.profileCompleted !== undefined && { profileCompleted: args.updates.profileCompleted }),
+      ...(args.updates.profileSubmittedAt !== undefined && { profileSubmittedAt: args.updates.profileSubmittedAt }),
+      ...(args.updates.accountVerified !== undefined && { accountVerified: args.updates.accountVerified }),
+      ...(args.updates.accountVerifiedAt !== undefined && { accountVerifiedAt: args.updates.accountVerifiedAt }),
+      ...(args.updates.accountVerifiedBy !== undefined && { accountVerifiedBy: args.updates.accountVerifiedBy }),
       updatedAt: now,
     };
     await ctx.db.patch(args.id, updates);
@@ -269,5 +284,126 @@ export const acceptLegal = mutation({
       updatedAt: now,
     });
     return userFromDoc(await ctx.db.get(user._id));
+  },
+});
+
+export const submitProfile = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    const now = Date.now();
+    await ctx.db.patch(user._id, {
+      profileCompleted: true,
+      profileSubmittedAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("auditEvents", {
+      actorUserId: user._id,
+      action: "profile.submitted",
+      entityType: "user",
+      entityId: user._id,
+      metadata: { name: user.name, dogName: user.dog?.name },
+      createdAt: now,
+    });
+    return userFromDoc(await ctx.db.get(user._id));
+  },
+});
+
+export const verifyAccount = mutation({
+  args: {
+    userId: v.id("users"),
+    verified: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    const now = Date.now();
+    await ctx.db.patch(args.userId, {
+      accountVerified: args.verified,
+      accountVerifiedAt: args.verified ? now : null,
+      accountVerifiedBy: args.verified ? (admin.name || "Admin") : null,
+      updatedAt: now,
+    });
+    const targetUser = await ctx.db.get(args.userId);
+    await ctx.db.insert("auditEvents", {
+      actorUserId: admin._id,
+      action: args.verified ? "account.verified" : "account.unverified",
+      entityType: "user",
+      entityId: args.userId,
+      metadata: { targetUserName: targetUser?.name },
+      createdAt: now,
+    });
+    return targetUser ? userFromDoc(targetUser) : null;
+  },
+});
+
+export const deleteSelf = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    const now = Date.now();
+
+    // Cancel any bookings
+    const userBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user", q => q.eq("userId", user._id))
+      .collect();
+    for (const b of userBookings) {
+      if (b.status !== "completed") {
+        await ctx.db.patch(b._id, { status: "cancelled", updatedAt: now });
+      }
+    }
+
+    // Delete vaccineRecords
+    const records = await ctx.db
+      .query("vaccineRecords")
+      .withIndex("by_user", q => q.eq("userId", user._id))
+      .collect();
+    for (const r of records) {
+      await ctx.db.delete(r._id);
+    }
+
+    await ctx.db.insert("auditEvents", {
+      actorUserId: user._id,
+      action: "account.deleted_by_user",
+      entityType: "user",
+      entityId: user._id,
+      metadata: { email: user.email, name: user.name },
+      createdAt: now,
+    });
+
+    await ctx.db.delete(user._id);
+    return { success: true };
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("users") },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    const now = Date.now();
+    const user = await ctx.db.get(args.id);
+    if (!user) return;
+
+    const userBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user", q => q.eq("userId", args.id))
+      .collect();
+    for (const b of userBookings) {
+      if (b.status !== "completed") {
+        await ctx.db.patch(b._id, { status: "cancelled", updatedAt: now });
+      }
+    }
+
+    await ctx.db.insert("auditEvents", {
+      actorUserId: admin._id,
+      action: "account.deleted_by_admin",
+      entityType: "user",
+      entityId: args.id,
+      metadata: { email: user.email, name: user.name },
+      createdAt: now,
+    });
+
+    await ctx.db.delete(args.id);
+    return { success: true };
   },
 });

@@ -125,5 +125,10 @@ export interface User {
   legalAccepted: boolean;
   legalAcceptedAt: string | null;
   legalVersion?: string;
+  profileCompleted?: boolean;
+  profileSubmittedAt?: string | null;
+  accountVerified?: boolean;
+  accountVerifiedAt?: string | null;
+  accountVerifiedBy?: string | null;
   createdAt: string;
 }

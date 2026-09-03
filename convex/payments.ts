@@ -152,6 +152,7 @@ export const getCheckoutUser = internalQuery({
       legalAccepted: user.legalAccepted,
       legalVersion: user.legalVersion,
       dogName: user.dog.name,
+      accountVerified: user.accountVerified ?? false,
     } : null;
   },
 });
@@ -287,6 +288,9 @@ export const createCheckoutSession = action({
       throw new Error("Accept the current service terms before checkout.");
     }
     if (!user.dogName) throw new Error("Complete your dog profile before checkout.");
+    if (!user.accountVerified) {
+      throw new Error("Your account and vaccine documents must be verified by an admin before you can pay and finalize sessions.");
+    }
 
     // Reserve sessions if scheduled online (for regular plans). For founding members,
     // reservations are scheduled manually via personal owner phone call.

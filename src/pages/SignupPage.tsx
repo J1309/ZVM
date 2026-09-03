@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, PenTool, Check, ChevronRight, ArrowLeft, Loader2, Eye, EyeOff, PawPrint, ShieldCheck } from 'lucide-react';
+import { User, PenTool, Check, ChevronRight, ArrowLeft, Loader2, Eye, EyeOff, PawPrint, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { SignUp } from '@clerk/react';
 import { useAuth } from '../lib/auth';
 import { UserAddress } from '../lib/types';
@@ -75,12 +75,13 @@ export default function SignupPage() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState<UserAddress>({ line1: '', city: '', province: '', postalCode: '' });
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const { user, signup } = useAuth();
   const navigate = useNavigate();
 
-  // Already signed in: no reason to show the create-account form.
-  if (user) return <Navigate to="/dashboard" replace />;
+  // Already signed in (and not in the middle of celebrating signup success):
+  if (user && !signupSuccess) return <Navigate to="/dashboard" replace />;
 
   const canProceed = () => {
     switch (activeStep) {
@@ -124,11 +125,51 @@ export default function SignupPage() {
     });
     setSaving(false);
     if (result.success) {
-      navigate('/dashboard');
+      setSignupSuccess(true);
     } else {
       setError(result.error ?? 'Signup failed.');
     }
   };
+
+  if (signupSuccess) {
+    return (
+      <main className="relative min-h-screen overflow-hidden px-4 flex items-center justify-center pt-28 pb-16">
+        <div className="absolute left-0 top-24 h-80 w-80 rounded-full bg-brand-500/18 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-[#1557B7]/45 blur-3xl" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative max-w-md w-full p-8 sm:p-10 rounded-3xl bg-white border border-[#D6E6FF] shadow-2xl text-center space-y-6"
+        >
+          <div className="w-20 h-20 rounded-3xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto shadow-inner border border-emerald-500/25">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+          </div>
+
+          <div>
+            <span className="px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-black text-xs uppercase tracking-wider">
+              Registration Successful
+            </span>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#071A3D] mt-3">
+              Account Created Successfully!
+            </h2>
+            <p className="text-sm text-[#4E6B99] mt-2 leading-relaxed">
+              Welcome to ZoomieVan, <strong>{name.split(' ')[0]}</strong>! Your client account has been initialized. Next, set up your dog profile and upload vaccine records on your new dashboard.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-2"
+            >
+              <span>Continue to Your Dashboard</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 pb-16 pt-28 sm:px-6 lg:px-8">

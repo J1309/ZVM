@@ -51,6 +51,11 @@ export default defineSchema({
     legalAccepted: v.boolean(),
     legalAcceptedAt: v.optional(v.number()),
     legalVersion: v.optional(v.string()),
+    profileCompleted: v.optional(v.boolean()),
+    profileSubmittedAt: v.optional(v.union(v.number(), v.null())),
+    accountVerified: v.optional(v.boolean()),
+    accountVerifiedAt: v.optional(v.union(v.number(), v.null())),
+    accountVerifiedBy: v.optional(v.union(v.string(), v.null())),
     ...timestampFields,
   })
     .index("by_email", ["email"])

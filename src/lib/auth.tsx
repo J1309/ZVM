@@ -7,6 +7,8 @@ import {
   getOrCreateCurrent,
   acceptLegal as acceptLegalRepo,
   updateUser as updateUserRepo,
+  submitProfile as submitProfileRepo,
+  deleteSelf as deleteSelfRepo,
 } from './repositories/userRepository';
 import { User } from './types';
 import { usesConvexBackend } from './convexClient';
@@ -25,6 +27,9 @@ interface AuthContext {
   signup: (data: SignupData) => Promise<{ success: boolean; error?: string }>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   acceptLegal: () => Promise<void>;
+  submitProfile: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -137,6 +142,24 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   }, [user]);
 
+  const submitProfile = useCallback(async () => {
+    if (!user) throw new Error('Not logged in');
+    const updated = await submitProfileRepo();
+    setUser(updated);
+  }, [user]);
+
+  const deleteAccount = useCallback(async () => {
+    await deleteSelfRepo();
+    logout();
+  }, [logout]);
+
+  const refreshUser = useCallback(async () => {
+    if (!user) return;
+    const { getUserById } = await import('./repositories/userRepository');
+    const fresh = await getUserById(user.id);
+    if (fresh) setUser(fresh);
+  }, [user]);
+
   const logout = useCallback(() => {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_TIME_KEY);
@@ -144,7 +167,18 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthCtx.Provider value={{ user, loading, login, signup, updateUser, acceptLegal, logout }}>
+    <AuthCtx.Provider value={{
+      user,
+      loading,
+      login,
+      signup,
+      updateUser,
+      acceptLegal,
+      submitProfile,
+      deleteAccount,
+      refreshUser,
+      logout,
+    }}>
       {children}
     </AuthCtx.Provider>
   );
@@ -233,6 +267,20 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   }, []);
 
+  const submitProfile = useCallback(async () => {
+    const updated = await submitProfileRepo();
+    setUser(updated);
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    await deleteSelfRepo();
+    logout();
+  }, [logout]);
+
+  const refreshUser = useCallback(async () => {
+    retrySync();
+  }, [retrySync]);
+
   const logout = useCallback(() => {
     setUser(null);
     setAuthError(null);
@@ -240,7 +288,20 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
   }, [signOut]);
 
   return (
-    <AuthCtx.Provider value={{ user, loading, authError, retrySync, login, signup, updateUser, acceptLegal, logout }}>
+    <AuthCtx.Provider value={{
+      user,
+      loading,
+      authError,
+      retrySync,
+      login,
+      signup,
+      updateUser,
+      acceptLegal,
+      submitProfile,
+      deleteAccount,
+      refreshUser,
+      logout,
+    }}>
       {children}
     </AuthCtx.Provider>
   );
@@ -261,6 +322,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup: async () => ({ success: false, error: 'Production authentication is not configured.' }),
       updateUser: async () => { throw new Error('Production authentication is not configured.'); },
       acceptLegal: async () => { throw new Error('Production authentication is not configured.'); },
+      submitProfile: async () => { throw new Error('Production authentication is not configured.'); },
+      deleteAccount: async () => { throw new Error('Production authentication is not configured.'); },
+      refreshUser: async () => { throw new Error('Production authentication is not configured.'); },
       logout: () => undefined,
     }}>
       {children}
