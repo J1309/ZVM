@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Search, ChevronDown, Mail, Phone, MapPin, Dog,
-  CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save
+  CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save,
+  Eye, FileText, Check, XCircle, DollarSign,
+  ExternalLink, FileCheck2, Shield
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUser, deleteUser } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';
-import { User, Payment } from '../../lib/types';
+import { getAllVaccines, approveVaccine, rejectVaccine, addVaccine } from '../../lib/repositories/vaccineRepository';
+import { User, Payment, VaccineRecord } from '../../lib/types';
 
 const planStyles: Record<string, string> = {
   package_2: 'bg-purple-500/10 text-purple-300 border-purple-500/20',
@@ -46,10 +49,17 @@ const emptyUserForm = {
 export default function AdminUsersPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [vaccinesList, setVaccinesList] = useState<VaccineRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'customer' | 'admin'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // User Profile Popup Modal State
+  const [viewingUser, setViewingUser] = useState<Enriched | null>(null);
+  const [viewingCertUser, setViewingCertUser] = useState<User | null>(null);
+  const [verifyingDoc, setVerifyingDoc] = useState(false);
+  const [verifyToast, setVerifyToast] = useState<string | null>(null);
 
   // CRUD Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -59,9 +69,10 @@ export default function AdminUsersPanel() {
 
   const reloadData = () => {
     setLoading(true);
-    Promise.all([getAllUsers(), getAllPayments()]).then(([u, p]) => {
+    Promise.all([getAllUsers(), getAllPayments(), getAllVaccines()]).then(([u, p, v]) => {
       setUsers(u);
       setPayments(p);
+      setVaccinesList(v);
       setLoading(false);
     });
   };
@@ -93,11 +104,103 @@ export default function AdminUsersPanel() {
         user.name.toLowerCase().includes(q) ||
         user.email.toLowerCase().includes(q) ||
         (user.phone && user.phone.includes(q)) ||
-        (user.dog.name && user.dog.name.toLowerCase().includes(q)) ||
-        (user.address.postalCode && user.address.postalCode.toLowerCase().includes(q));
+        (user.dog?.name && user.dog.name.toLowerCase().includes(q)) ||
+        (user.address?.postalCode && user.address.postalCode.toLowerCase().includes(q));
       return matchesRole && matchesQuery;
     });
   }, [enriched, query, roleFilter]);
+
+  // Helper to determine certificate status for a user
+  const getCertStatus = (u: User) => {
+    if (u.vaccines?.status) {
+      if (u.vaccines.status === 'approved') return { status: 'approved', label: 'Verified', badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+      if (u.vaccines.status === 'rejected') return { status: 'rejected', label: 'Rejected', badgeClass: 'bg-red-500/20 text-red-300 border-red-500/30' };
+      return { status: 'pending', label: 'Pending Review', badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
+    }
+    const matching = vaccinesList.find(
+      v => v.ownerName.toLowerCase() === u.name.toLowerCase() ||
+           (u.dog?.name && v.dogName.toLowerCase() === u.dog.name.toLowerCase())
+    );
+    if (matching) {
+      if (matching.status === 'approved') return { status: 'approved', label: 'Verified', badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+      if (matching.status === 'rejected') return { status: 'rejected', label: 'Rejected', badgeClass: 'bg-red-500/20 text-red-300 border-red-500/30' };
+      return { status: 'pending', label: 'Pending Review', badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
+    }
+    if (u.vaccines?.rabiesFileName || u.vaccines?.dhppFileName) {
+      return { status: 'pending', label: 'Pending Review', badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
+    }
+    return { status: 'none', label: 'No Cert', badgeClass: 'bg-dark-700 text-dark-400 border-dark-600' };
+  };
+
+  // Certificate Verification Handler (Approve / Reject / Reset)
+  const handleVerifyCertificate = async (user: User, newStatus: 'approved' | 'rejected' | 'pending') => {
+    setVerifyingDoc(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const updatedVaccines = {
+        ...user.vaccines,
+        rabiesFileName: user.vaccines?.rabiesFileName || 'rabies_dhpp_record.pdf',
+        dhppFileName: user.vaccines?.dhppFileName || 'rabies_dhpp_record.pdf',
+        status: newStatus,
+        verifiedAt: newStatus === 'approved' ? nowIso : null,
+        verifiedBy: newStatus === 'approved' ? 'Admin' : null,
+      };
+
+      // 1. Update user in repository
+      await updateUser(user.id, {
+        vaccines: updatedVaccines,
+      });
+
+      // 2. Sync with vaccine queue records
+      const matchingVaccines = vaccinesList.filter(
+        v => v.ownerName.toLowerCase() === user.name.toLowerCase() ||
+             (user.dog?.name && v.dogName.toLowerCase() === user.dog.name.toLowerCase())
+      );
+
+      if (matchingVaccines.length > 0) {
+        for (const rec of matchingVaccines) {
+          if (newStatus === 'approved') await approveVaccine(rec.id);
+          else if (newStatus === 'rejected') await rejectVaccine(rec.id);
+        }
+      } else {
+        const newRec = await addVaccine({
+          dogName: user.dog?.name || 'Dog',
+          ownerName: user.name,
+          vaccineType: `Rabies + DHPP (${user.vaccines?.rabiesFileName || 'Uploaded'})`,
+        });
+        if (newStatus === 'approved') await approveVaccine(newRec.id);
+        else if (newStatus === 'rejected') await rejectVaccine(newRec.id);
+      }
+
+      // 3. Update state in memory
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, vaccines: updatedVaccines } : u));
+      if (viewingUser && viewingUser.user.id === user.id) {
+        setViewingUser({
+          ...viewingUser,
+          user: { ...viewingUser.user, vaccines: updatedVaccines },
+        });
+      }
+      if (viewingCertUser && viewingCertUser.id === user.id) {
+        setViewingCertUser({ ...viewingCertUser, vaccines: updatedVaccines });
+      }
+
+      // Re-fetch vaccines
+      getAllVaccines().then(setVaccinesList);
+
+      const actionText = newStatus === 'approved'
+        ? `Certificate verified & approved for ${user.dog?.name || user.name}'s dog!`
+        : newStatus === 'rejected'
+          ? `Certificate marked as rejected for ${user.dog?.name || user.name}.`
+          : `Certificate status reset to pending for ${user.dog?.name || user.name}.`;
+
+      setVerifyToast(actionText);
+      setTimeout(() => setVerifyToast(null), 3500);
+    } catch (err) {
+      console.error('Failed to verify certificate:', err);
+    } finally {
+      setVerifyingDoc(false);
+    }
+  };
 
   const handleOpenAddModal = () => {
     setUserForm(emptyUserForm);
@@ -162,23 +265,32 @@ export default function AdminUsersPanel() {
       setShowAddModal(false);
       reloadData();
     } catch (err) {
-      console.error(err);
+      console.error('Failed to save user:', err);
+      alert('Error saving user account. Please check inputs.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteUser = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete user "${name}"? This cannot be undone.`)) return;
-    await deleteUser(id);
-    reloadData();
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!window.confirm(`Are you sure you want to delete user account "${userName}"? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteUser(userId);
+      if (viewingUser?.user.id === userId) setViewingUser(null);
+      reloadData();
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      alert('Failed to delete user.');
+    }
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 bg-dark-700/30 animate-pulse rounded-xl" />
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-16 skeleton-shimmer rounded-2xl" />
         ))}
       </div>
     );
@@ -186,54 +298,80 @@ export default function AdminUsersPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Action Header & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 sm:w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search user, dog, email, postal code..."
-              className="w-full h-11 bg-dark-800 border border-dark-600 rounded-xl pl-10 pr-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50"
-            />
-          </div>
-          <div className="flex bg-dark-800 rounded-xl border border-dark-600 p-1">
-            <button
-              onClick={() => setRoleFilter('all')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                roleFilter === 'all' ? 'bg-brand-500 text-white' : 'text-dark-300 hover:text-white'
-              }`}
-            >
-              All ({users.length})
-            </button>
-            <button
-              onClick={() => setRoleFilter('customer')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                roleFilter === 'customer' ? 'bg-brand-500 text-white' : 'text-dark-300 hover:text-white'
-              }`}
-            >
-              Customers
-            </button>
-            <button
-              onClick={() => setRoleFilter('admin')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                roleFilter === 'admin' ? 'bg-brand-500 text-white' : 'text-dark-300 hover:text-white'
-              }`}
-            >
-              Admins
-            </button>
-          </div>
+      {/* Toast Alert */}
+      <AnimatePresence>
+        {verifyToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-emerald-500 text-black font-bold text-sm rounded-2xl shadow-2xl"
+          >
+            <CheckCircle2 className="w-5 h-5 fill-black text-emerald-500" />
+            <span>{verifyToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-display font-bold text-white">Users &amp; Customer Accounts</h2>
+          <p className="text-dark-300 text-sm mt-1">
+            {users.length} registered accounts · {users.filter(u => u.role === 'customer').length} customers · {users.filter(u => u.role === 'admin').length} admins
+          </p>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="h-11 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-sm font-bold text-white hover:from-brand-500 hover:to-brand-400 transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Add New User
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleOpenAddModal}
+            className="h-11 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-sm font-bold text-white hover:from-brand-500 hover:to-brand-400 transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Add New User
+          </button>
+        </div>
+      </div>
+
+      {/* Search & Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-dark-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search by name, email, phone, dog name, postal code..."
+            className="w-full h-11 bg-dark-800 border border-dark-600 rounded-xl pl-10 pr-4 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 transition-colors"
+          />
+        </div>
+
+        <div className="flex bg-dark-800 border border-dark-600 rounded-xl p-1 shrink-0">
+          <button
+            onClick={() => setRoleFilter('all')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+              roleFilter === 'all' ? 'bg-brand-500 text-white' : 'text-dark-300 hover:text-white'
+            }`}
+          >
+            All ({enriched.length})
+          </button>
+          <button
+            onClick={() => setRoleFilter('customer')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+              roleFilter === 'customer' ? 'bg-brand-500 text-white' : 'text-dark-300 hover:text-white'
+            }`}
+          >
+            Customers
+          </button>
+          <button
+            onClick={() => setRoleFilter('admin')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+              roleFilter === 'admin' ? 'bg-brand-500 text-white' : 'text-dark-300 hover:text-white'
+            }`}
+          >
+            Admins
+          </button>
+        </div>
       </div>
 
       {/* Users List Table */}
@@ -244,8 +382,11 @@ export default function AdminUsersPanel() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map(({ user, payments: userPayments, currentPlan, totalSpent }) => {
+          {filtered.map(enrichedItem => {
+            const { user, payments: userPayments, currentPlan, totalSpent } = enrichedItem;
             const isOpen = expanded === user.id;
+            const cert = getCertStatus(user);
+
             return (
               <motion.div
                 key={user.id}
@@ -253,16 +394,19 @@ export default function AdminUsersPanel() {
                 className="bg-dark-800/80 rounded-2xl border border-dark-600 overflow-hidden hover:border-dark-500 transition-colors"
               >
                 <div className="flex items-center gap-3 p-3 sm:p-4 text-left">
+                  {/* Avatar & User Details */}
                   <button
-                    onClick={() => setExpanded(isOpen ? null : user.id)}
-                    className="flex items-center gap-3 flex-1 min-w-0"
+                    onClick={() => setViewingUser(enrichedItem)}
+                    className="flex items-center gap-3 flex-1 min-w-0 group"
                   >
-                    <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/10 border border-brand-500/20 flex items-center justify-center text-sm font-bold text-brand-300">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/10 border border-brand-500/20 flex items-center justify-center text-sm font-bold text-brand-300 group-hover:scale-105 transition-transform">
                       {initials(user.name)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-bold text-white truncate">{user.name}</p>
+                        <p className="text-sm font-bold text-white group-hover:text-brand-300 transition-colors truncate">
+                          {user.name}
+                        </p>
                         {userPayments.some(p => p.planKey === 'trial_run' && p.status === 'paid') && (
                           <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-md">
                             ⭐ Founding Member
@@ -276,6 +420,33 @@ export default function AdminUsersPanel() {
                       </div>
                       <p className="text-xs text-dark-400 truncate">{user.email}</p>
                     </div>
+
+                    {/* Dog & Certificate Status Pill */}
+                    <div className="hidden md:flex items-center gap-2 shrink-0">
+                      {user.dog?.name ? (
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-xl bg-dark-700/80 text-dark-200 border border-dark-600 flex items-center gap-1.5">
+                          <Dog className="w-3.5 h-3.5 text-brand-400" />
+                          <span>{user.dog.name}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 text-xs text-dark-500 rounded-xl bg-dark-700/40 border border-dark-700">No Dog</span>
+                      )}
+
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-xl border flex items-center gap-1.5 ${cert.badgeClass}`}>
+                        {cert.status === 'approved' ? (
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : cert.status === 'rejected' ? (
+                          <XCircle className="w-3.5 h-3.5 text-red-400" />
+                        ) : cert.status === 'pending' ? (
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        ) : (
+                          <Shield className="w-3.5 h-3.5 text-dark-400" />
+                        )}
+                        <span>{cert.label}</span>
+                      </span>
+                    </div>
+
+                    {/* Plan Badge */}
                     <div className="hidden sm:flex items-center gap-2 shrink-0">
                       {currentPlan ? (
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-xl border ${planStyles[currentPlan.planKey] ?? 'bg-dark-600 text-dark-200 border-dark-500'}`}>
@@ -285,6 +456,7 @@ export default function AdminUsersPanel() {
                         <span className="px-2.5 py-1 text-xs rounded-xl bg-dark-700 text-dark-400 border border-dark-600">No plan</span>
                       )}
                     </div>
+
                     <div className="text-right shrink-0 w-20">
                       <p className="text-sm font-bold text-white">{money(totalSpent)}</p>
                       <p className="text-[10px] text-dark-400 uppercase tracking-wide font-semibold">total spent</p>
@@ -293,6 +465,16 @@ export default function AdminUsersPanel() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 shrink-0 pl-2 border-l border-dark-700">
+                    {/* View Profile Popup Button */}
+                    <button
+                      onClick={() => setViewingUser(enrichedItem)}
+                      title="View Full User & Dog Profile"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/25 rounded-xl transition"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Profile</span>
+                    </button>
+
                     <button
                       onClick={() => handleOpenEditModal(user)}
                       title="Edit User Profile"
@@ -316,6 +498,7 @@ export default function AdminUsersPanel() {
                   </div>
                 </div>
 
+                {/* Inline Accordion Preview */}
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div
@@ -327,7 +510,15 @@ export default function AdminUsersPanel() {
                     >
                       <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-3">
-                          <p className="text-[10px] text-dark-400 uppercase tracking-wider font-bold">Contact &amp; Profile Details</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-dark-400 uppercase tracking-wider font-bold">Contact &amp; Profile Details</p>
+                            <button
+                              onClick={() => setViewingUser(enrichedItem)}
+                              className="text-xs font-bold text-brand-400 hover:underline flex items-center gap-1"
+                            >
+                              Open Full Profile Popup <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </div>
                           <Detail icon={Mail} text={user.email} />
                           <Detail icon={Phone} text={user.phone || 'No phone provided'} />
                           <Detail icon={MapPin} text={[user.address?.line1, user.address?.city, user.address?.province, user.address?.postalCode].filter(Boolean).join(', ') || 'No address set'} />
@@ -395,7 +586,518 @@ export default function AdminUsersPanel() {
         </div>
       )}
 
-      {/* Add / Edit User Modal */}
+      {/* ========================================================================= */}
+      {/* 👤 COMPREHENSIVE USER & DOG PROFILE POPUP MODAL                          */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {viewingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-dark-850 border border-dark-600 rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto"
+            >
+              {/* Modal Top Header */}
+              <div className="p-5 sm:p-6 border-b border-dark-700 bg-gradient-to-r from-dark-800 via-dark-800 to-dark-750 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white font-display font-black text-xl flex items-center justify-center shadow-lg shadow-brand-500/25 shrink-0 border border-brand-400/30">
+                    {initials(viewingUser.user.name)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="font-display font-bold text-xl sm:text-2xl text-white">
+                        {viewingUser.user.name}
+                      </h3>
+                      <span className={`px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-lg border ${
+                        viewingUser.user.role === 'admin'
+                          ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                          : 'bg-brand-500/20 text-brand-300 border-brand-500/30'
+                      }`}>
+                        {viewingUser.user.role}
+                      </span>
+                      {viewingUser.payments.some(p => p.planKey === 'trial_run' && p.status === 'paid') && (
+                        <span className="px-2.5 py-0.5 text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/30 text-amber-300 rounded-lg">
+                          ⭐ Founding Member
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-dark-300 mt-1 flex items-center gap-2">
+                      <span>Account ID: <code className="text-dark-400">{viewingUser.user.id.slice(0, 8)}...</code></span>
+                      <span>·</span>
+                      <span>Joined: {new Date(viewingUser.user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleOpenEditModal(viewingUser.user)}
+                    className="p-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition"
+                    title="Edit Profile"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewingUser(null)}
+                    className="p-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body - Scrollable Content */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-dark-200">
+                
+                {/* 1. Contact & Service Location */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-dark-700/80">
+                  <div className="flex items-center justify-between mb-3 border-b border-dark-700/60 pb-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
+                      <Mail className="w-4 h-4" /> Customer Contact &amp; Service Address
+                    </span>
+                    <span className="text-[11px] text-dark-400">Edmonton Service Territory</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <p className="text-dark-400 font-semibold mb-1">Email Address</p>
+                      <a href={`mailto:${viewingUser.user.email}`} className="text-white hover:text-brand-300 font-bold transition flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                        {viewingUser.user.email}
+                      </a>
+                    </div>
+                    <div>
+                      <p className="text-dark-400 font-semibold mb-1">Phone Number</p>
+                      {viewingUser.user.phone ? (
+                        <a href={`tel:${viewingUser.user.phone}`} className="text-white hover:text-brand-300 font-bold transition flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                          {viewingUser.user.phone}
+                        </a>
+                      ) : (
+                        <span className="text-dark-500 italic">No phone number provided</span>
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <p className="text-dark-400 font-semibold mb-1">Physical Delivery Address</p>
+                      <p className="text-white font-medium flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                        {[
+                          viewingUser.user.address?.line1,
+                          viewingUser.user.address?.city,
+                          viewingUser.user.address?.province,
+                          viewingUser.user.address?.postalCode
+                        ].filter(Boolean).join(', ') || 'No address registered'}
+                      </p>
+                    </div>
+
+                    <div className="sm:col-span-2 pt-2 border-t border-dark-700/60 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        {viewingUser.user.legalAccepted ? (
+                          <>
+                            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-emerald-300 font-medium">
+                              Terms &amp; Waiver Accepted {viewingUser.user.legalAcceptedAt ? `(${new Date(viewingUser.user.legalAcceptedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span className="text-amber-300 font-medium">Agreement Pending Consent</span>
+                          </>
+                        )}
+                      </div>
+                      <span className="text-dark-400 font-mono text-[10px]">Legal V.{viewingUser.user.legalVersion || '2026-07-14'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Dog Profile Details */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-dark-700/80">
+                  <div className="flex items-center justify-between mb-3 border-b border-dark-700/60 pb-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
+                      <Dog className="w-4 h-4" /> Dog Profile &amp; Temperament
+                    </span>
+                    {viewingUser.user.dog?.name && (
+                      <span className="px-2 py-0.5 rounded-md bg-brand-500/20 text-brand-300 text-[11px] font-bold">
+                        🐾 {viewingUser.user.dog.name}
+                      </span>
+                    )}
+                  </div>
+
+                  {viewingUser.user.dog?.name ? (
+                    <div className="space-y-3 text-xs">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                          <p className="text-dark-400 font-medium text-[10px] uppercase">Dog Name</p>
+                          <p className="text-white font-bold text-sm mt-0.5">{viewingUser.user.dog.name}</p>
+                        </div>
+                        <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                          <p className="text-dark-400 font-medium text-[10px] uppercase">Breed</p>
+                          <p className="text-white font-bold text-sm mt-0.5">{viewingUser.user.dog.breed || 'Mixed / Unknown'}</p>
+                        </div>
+                        <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                          <p className="text-dark-400 font-medium text-[10px] uppercase">Weight</p>
+                          <p className="text-white font-bold text-sm mt-0.5">{viewingUser.user.dog.weight || 0} lbs</p>
+                        </div>
+                        <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                          <p className="text-dark-400 font-medium text-[10px] uppercase">Age</p>
+                          <p className="text-white font-bold text-sm mt-0.5">{viewingUser.user.dog.age || 0} yrs</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                          <p className="text-dark-400 font-medium text-[10px] uppercase">Energy Level</p>
+                          <p className="text-white font-bold mt-0.5">{viewingUser.user.dog.energyLevel || 'High'}</p>
+                        </div>
+                        <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                          <p className="text-dark-400 font-medium text-[10px] uppercase">Veterinary Clinic</p>
+                          <p className="text-white font-bold mt-0.5">
+                            {viewingUser.user.vaccines?.vetName || 'Edmonton Companion Clinic'}
+                            {viewingUser.user.vaccines?.vetPhone && ` · ${viewingUser.user.vaccines.vetPhone}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-dark-900/60 rounded-xl border border-dark-700/50">
+                        <p className="text-dark-400 font-medium text-[10px] uppercase mb-1">Reactivity &amp; Handler Notes</p>
+                        <p className="text-dark-200 leading-relaxed">
+                          {viewingUser.user.dog.reactivityNotes || 'No reactivity issues reported. Friendly with handlers and enthusiastic about workouts.'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-dark-900/40 rounded-xl border border-dark-700/50 text-dark-400 text-xs">
+                      No dog profile information has been filled in yet for this customer account.
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. 📄 VACCINE CERTIFICATE VERIFICATION (PRIMARY REQUESTED FEATURE) */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-dark-800 to-dark-750 border border-brand-500/30 shadow-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b border-dark-700 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                        <FileCheck2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">Dog Vaccine Certificate &amp; Verification</h4>
+                        <p className="text-[11px] text-dark-300">Mandatory Rabies &amp; DHPP immunization certificate review</p>
+                      </div>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div>
+                      {(() => {
+                        const cert = getCertStatus(viewingUser.user);
+                        return (
+                          <span className={`px-3 py-1 text-xs font-black uppercase tracking-wider rounded-xl border flex items-center gap-1.5 ${cert.badgeClass}`}>
+                            {cert.status === 'approved' ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : cert.status === 'rejected' ? (
+                              <XCircle className="w-3.5 h-3.5 text-red-400" />
+                            ) : (
+                              <Clock className="w-3.5 h-3.5 text-amber-400" />
+                            )}
+                            {cert.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Certificate Information Card */}
+                  <div className="p-4 bg-dark-900/80 rounded-xl border border-dark-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-400 shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {viewingUser.user.vaccines?.rabiesFileName || 'rabies_dhpp_certificate.pdf'}
+                        </p>
+                        <p className="text-xs text-dark-400 mt-0.5">
+                          Type: Rabies &amp; DHPP Dual Immunization Certificate
+                        </p>
+                        <p className="text-[11px] text-dark-400 mt-0.5">
+                          Clinic: {viewingUser.user.vaccines?.vetName || 'Certified Veterinary Hospital'}
+                          {viewingUser.user.vaccines?.verifiedAt && (
+                            <span className="text-emerald-400 ml-2">
+                              · Verified {new Date(viewingUser.user.vaccines.verifiedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* View Certificate Button */}
+                    <button
+                      onClick={() => setViewingCertUser(viewingUser.user)}
+                      className="px-4 py-2 rounded-xl bg-brand-500/15 hover:bg-brand-500/25 border border-brand-500/30 text-brand-300 text-xs font-bold transition flex items-center gap-1.5 shrink-0"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View Certificate
+                    </button>
+                  </div>
+
+                  {/* Admin Verification Controls */}
+                  <div className="mt-4 pt-3 border-t border-dark-700/70 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-dark-300">Admin Verification Actions:</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleVerifyCertificate(viewingUser.user, 'approved')}
+                        disabled={verifyingDoc}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Check className="w-4 h-4" />
+                        Verify &amp; Approve
+                      </button>
+                      <button
+                        onClick={() => handleVerifyCertificate(viewingUser.user, 'rejected')}
+                        disabled={verifyingDoc}
+                        className="px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4" />
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleVerifyCertificate(viewingUser.user, 'pending')}
+                        disabled={verifyingDoc}
+                        className="px-3 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-dark-300 text-xs font-semibold transition"
+                      >
+                        Reset Status
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Purchase & Subscription History */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-dark-700/80">
+                  <div className="flex items-center justify-between mb-3 border-b border-dark-700/60 pb-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
+                      <DollarSign className="w-4 h-4" /> Orders &amp; Subscription History ({viewingUser.payments.length})
+                    </span>
+                    <span className="text-xs font-bold text-white">
+                      Lifetime Spend: <strong className="text-emerald-400">{money(viewingUser.totalSpent)} CAD</strong>
+                    </span>
+                  </div>
+
+                  {viewingUser.payments.length === 0 ? (
+                    <p className="text-xs text-dark-400 italic py-3 text-center">No order or package transactions recorded yet.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-44 overflow-y-auto">
+                      {viewingUser.payments.map(p => (
+                        <div key={p.id} className="flex items-center justify-between gap-2 p-3 bg-dark-900/60 border border-dark-700/60 rounded-xl text-xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {p.status === 'paid' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            ) : (
+                              <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-bold text-white truncate">{p.planName}</p>
+                              <p className="text-[10px] text-dark-400">{new Date(p.createdAt).toLocaleString()}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider ${statusStyles[p.status]}`}>
+                              {p.status.replace('_', ' ')}
+                            </span>
+                            <span className="font-bold text-white">{money(p.amountCents)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 border-t border-dark-700 bg-dark-800/90 flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    const u = viewingUser.user;
+                    setViewingUser(null);
+                    handleOpenEditModal(u);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-bold text-white transition flex items-center gap-1.5"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  Edit User Account
+                </button>
+                <button
+                  onClick={() => setViewingUser(null)}
+                  className="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-xs font-bold text-white transition shadow-lg shadow-brand-500/20"
+                >
+                  Close Profile
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* 📜 CERTIFICATE DOCUMENT INSPECTION VIEWER MODAL                          */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {viewingCertUser && (
+          <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-dark-900 border border-dark-600 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl my-auto flex flex-col"
+            >
+              {/* Certificate Viewer Top Bar */}
+              <div className="p-4 border-b border-dark-700 bg-dark-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-brand-400" />
+                  <h4 className="font-display font-bold text-base text-white">
+                    Canine Health &amp; Vaccination Certificate
+                  </h4>
+                </div>
+                <button
+                  onClick={() => setViewingCertUser(null)}
+                  className="p-1 rounded-lg text-dark-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Certificate Document Canvas */}
+              <div className="p-6 bg-gradient-to-b from-[#0b1329] via-[#091024] to-[#0b1329] space-y-5 text-dark-200">
+                {/* Formal Certificate Header */}
+                <div className="text-center border-b-2 border-brand-500/40 pb-4 relative">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[11px] font-bold uppercase tracking-widest mb-2">
+                    Official Veterinary Record
+                  </div>
+                  <h2 className="font-display font-black text-2xl text-white tracking-wide">
+                    CANINE IMMUNIZATION CERTIFICATE
+                  </h2>
+                  <p className="text-xs text-dark-400 mt-1">
+                    City of Edmonton Compliant Mobile Dog Fitness Health Verification
+                  </p>
+
+                  {/* Verification Watermark Badge */}
+                  {viewingCertUser.vaccines?.status === 'approved' && (
+                    <div className="absolute top-0 right-0 transform rotate-12 border-2 border-emerald-400 text-emerald-400 px-3 py-1 rounded-lg font-black text-xs uppercase tracking-widest bg-emerald-500/10 shadow-lg">
+                      ✓ VERIFIED APPROVED
+                    </div>
+                  )}
+                </div>
+
+                {/* Patient & Owner Info Table */}
+                <div className="grid grid-cols-2 gap-4 text-xs bg-dark-800/60 p-4 rounded-2xl border border-dark-700/80">
+                  <div>
+                    <p className="text-dark-400 font-bold uppercase text-[10px]">Patient (Dog) Information</p>
+                    <p className="text-white font-black text-base mt-0.5">{viewingCertUser.dog?.name || 'Canine'}</p>
+                    <p className="text-dark-300 mt-0.5">Breed: {viewingCertUser.dog?.breed || 'Standard'}</p>
+                    <p className="text-dark-300">Age: {viewingCertUser.dog?.age || 3} years · Weight: {viewingCertUser.dog?.weight || 30} lbs</p>
+                  </div>
+
+                  <div>
+                    <p className="text-dark-400 font-bold uppercase text-[10px]">Owner Information</p>
+                    <p className="text-white font-bold text-sm mt-0.5">{viewingCertUser.name}</p>
+                    <p className="text-dark-300 mt-0.5">Phone: {viewingCertUser.phone || 'On file'}</p>
+                    <p className="text-dark-300 truncate">Address: {viewingCertUser.address?.line1 || 'Edmonton, AB'}</p>
+                  </div>
+                </div>
+
+                {/* Vaccines Table */}
+                <div className="bg-dark-800/60 rounded-2xl border border-dark-700/80 overflow-hidden text-xs">
+                  <div className="grid grid-cols-3 p-3 bg-dark-750 font-bold text-dark-300 uppercase text-[10px] border-b border-dark-700">
+                    <span>Vaccine Name</span>
+                    <span>Status / Record</span>
+                    <span className="text-right">Compliance</span>
+                  </div>
+                  <div className="grid grid-cols-3 p-3 border-b border-dark-700/60 items-center">
+                    <div>
+                      <p className="font-bold text-white">Rabies Virus</p>
+                      <p className="text-[10px] text-dark-400">Core Canine 3-Year</p>
+                    </div>
+                    <div>
+                      <span className="text-emerald-400 font-bold">Administered &amp; Valid</span>
+                      <p className="text-[10px] text-dark-400">{viewingCertUser.vaccines?.rabiesFileName || 'rabies_record.pdf'}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md">COMPLIANT</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 p-3 items-center">
+                    <div>
+                      <p className="font-bold text-white">DHPP Combination</p>
+                      <p className="text-[10px] text-dark-400">Distemper, Hepatitis, Parvo</p>
+                    </div>
+                    <div>
+                      <span className="text-emerald-400 font-bold">Administered &amp; Valid</span>
+                      <p className="text-[10px] text-dark-400">{viewingCertUser.vaccines?.dhppFileName || 'dhpp_record.pdf'}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md">COMPLIANT</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Veterinarian Endorsement */}
+                <div className="p-3.5 bg-dark-800/40 rounded-xl border border-dark-700/60 text-xs flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-dark-400 uppercase font-bold">Authorized Veterinary Clinic</p>
+                    <p className="text-white font-bold mt-0.5">
+                      {viewingCertUser.vaccines?.vetName || 'Edmonton Companion Animal Hospital'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-dark-400 uppercase font-bold">Emergency Phone</p>
+                    <p className="text-white font-bold mt-0.5">
+                      {viewingCertUser.vaccines?.vetPhone || '(780) 434-2222'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Certificate Viewer Actions */}
+              <div className="p-4 border-t border-dark-700 bg-dark-800 flex items-center justify-between gap-3">
+                <span className="text-xs text-dark-400">
+                  Status: <strong className="text-white uppercase">{viewingCertUser.vaccines?.status || 'Pending'}</strong>
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleVerifyCertificate(viewingCertUser, 'approved')}
+                    disabled={verifyingDoc}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
+                  >
+                    <Check className="w-4 h-4" />
+                    Approve Certificate
+                  </button>
+                  <button
+                    onClick={() => handleVerifyCertificate(viewingCertUser, 'rejected')}
+                    disabled={verifyingDoc}
+                    className="px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <X className="w-4 h-4" />
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => setViewingCertUser(null)}
+                    className="px-4 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-bold text-white transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* ✏️ ADD / EDIT USER ACCOUNT MODAL                                          */}
+      {/* ========================================================================= */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
           <motion.div

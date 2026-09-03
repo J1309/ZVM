@@ -91,6 +91,10 @@ export interface UserVaccines {
   dhppFileName: string;
   vetName: string;
   vetPhone: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
+  documentUrl?: string | null;
 }
 
 export interface Payment {
