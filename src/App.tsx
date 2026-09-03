@@ -17,8 +17,8 @@ import LegalPage from './pages/LegalPage';
 import AboutPage from './pages/AboutPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProductionReadinessGate from './components/ProductionReadinessGate';
-import ComingSoonModal from './components/ComingSoonModal';
-import LaunchCelebrationBanner from './components/LaunchCelebrationBanner';
+import LaunchCelebrationModal from './components/LaunchCelebrationModal';
+import FloatingLaunchTimer from './components/FloatingLaunchTimer';
 import AuthRedirect from './components/AuthRedirect';
 import { isProductionBackendReady, isProductionBuild } from './lib/runtime';
 import LandingSkeleton from './components/LandingSkeleton';
@@ -75,6 +75,7 @@ function LandingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [modulesReady, setModulesReady] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [celebrationOpen, setCelebrationOpen] = useState(false);
 
   useEffect(() => {
     const img = new Image();
@@ -122,7 +123,6 @@ function LandingPage() {
           <Navbar />
 
           <Hero />
-          <LaunchCelebrationBanner />
           <HomeAboutPreview />
           <HowItWorks />
           <BookNow />
@@ -132,7 +132,15 @@ function LandingPage() {
         </motion.div>
       )}
 
-      {showContent && <ComingSoonModal />}
+      {showContent && (
+        <>
+          <FloatingLaunchTimer onOpenModal={() => setCelebrationOpen(true)} />
+          <LaunchCelebrationModal
+            forceOpen={celebrationOpen ? true : undefined}
+            onClose={() => setCelebrationOpen(false)}
+          />
+        </>
+      )}
     </div>
   );
 }

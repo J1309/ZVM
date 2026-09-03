@@ -274,7 +274,8 @@ export const createCheckoutSession = action({
     const isFoundingClaim = args.planKey === FOUNDING_PLAN_KEY && founding.isOfferActive;
     const expectedSessions = plan.sessionsCount + (isFoundingClaim ? FOUNDING_BONUS_SESSIONS : 0);
 
-    if (args.sessions.length !== expectedSessions) {
+    // Founding members do not pick dates online; the owner personally calls them to arrange sessions.
+    if (!isFoundingClaim && args.sessions.length !== expectedSessions) {
       throw new Error(`${plan.name} requires ${expectedSessions} session${expectedSessions === 1 ? "" : "s"}.`);
     }
 
@@ -287,17 +288,19 @@ export const createCheckoutSession = action({
     }
     if (!user.dogName) throw new Error("Complete your dog profile before checkout.");
 
-    // Reserve all sessions BEFORE creating the Stripe session — this atomically
-    // rejects a double-booking. The webhook later confirms (on paid) or the
-    // reservations are released (on failure/expiry).
+    // Reserve sessions if scheduled online (for regular plans). For founding members,
+    // reservations are scheduled manually via personal owner phone call.
     const planLabel = isFoundingClaim ? `${plan.name} (Founding Member)` : plan.name;
-    const bookingIds = await ctx.runMutation(internal.bookings.reserveMany, {
-      userId: user.id,
-      sessions: args.sessions,
-      planName: planLabel,
-      totalAmountCents: plan.amountCents,
-      surcharge: 0,
-    });
+    let bookingIds: Array<import("./_generated/dataModel").Id<"bookings">> = [];
+    if (!isFoundingClaim && args.sessions.length > 0) {
+      bookingIds = await ctx.runMutation(internal.bookings.reserveMany, {
+        userId: user.id,
+        sessions: args.sessions,
+        planName: planLabel,
+        totalAmountCents: plan.amountCents,
+        surcharge: 0,
+      });
+    }
 
     try {
       const baseUrl = siteUrl(args.origin);

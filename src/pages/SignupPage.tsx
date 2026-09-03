@@ -85,7 +85,16 @@ export default function SignupPage() {
   const canProceed = () => {
     switch (activeStep) {
       case 0:
-        return name && email && password.length >= 6 && address.line1 && address.city && address.province && address.postalCode;
+        return (
+          name.trim() &&
+          email.trim() &&
+          password.length >= 6 &&
+          phone.trim().length >= 7 &&
+          address.line1 &&
+          address.city &&
+          address.province &&
+          address.postalCode
+        );
       case 1:
         return legalAccepted;
       default:
@@ -211,8 +220,25 @@ export default function SignupPage() {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-black uppercase tracking-[0.12em] text-[#315B96]">Phone</label>
-                    <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+1 (555) 000-0000" className={inputClass} />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#315B96]">
+                        Phone Number <span className="text-brand-600">*</span>
+                      </label>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded">
+                        Owner will call you
+                      </span>
+                    </div>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      placeholder="+1 (780) 555-0199"
+                      className={inputClass}
+                      required
+                    />
+                    <p className="text-[11px] text-[#4A6B9C]">
+                      The owner will personally call this number to schedule your sessions.
+                    </p>
                   </div>
                 </div>
 

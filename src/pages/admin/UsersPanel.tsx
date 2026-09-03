@@ -712,11 +712,22 @@ export default function AdminUsersPanel() {
                       </a>
                     </div>
                     <div>
-                      <p className="text-dark-400 font-semibold mb-1">Phone Number</p>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <p className="text-dark-400 font-semibold">Phone Number</p>
+                        {viewingUser.payments.some(p => p.planKey === 'trial_run') && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                            📞 Call to Schedule
+                          </span>
+                        )}
+                      </div>
                       {viewingUser.user.phone ? (
-                        <a href={`tel:${viewingUser.user.phone}`} className="text-white hover:text-brand-300 font-bold transition flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                          {viewingUser.user.phone}
+                        <a
+                          href={`tel:${viewingUser.user.phone}`}
+                          className="text-amber-300 hover:text-white font-bold transition flex items-center gap-1.5 text-xs sm:text-sm bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1.5 rounded-xl w-fit"
+                          title="Click to Call Customer"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>{viewingUser.user.phone}</span>
                         </a>
                       ) : (
                         <span className="text-dark-500 italic">No phone number provided</span>
