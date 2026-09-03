@@ -4,7 +4,7 @@ import {
   Users, Search, ChevronDown, Mail, Phone, MapPin, Dog,
   CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save,
   Eye, FileText, Check, XCircle, DollarSign,
-  ExternalLink, FileCheck2, Shield
+  ExternalLink, FileCheck2, Shield, AlertCircle
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUser, deleteUser } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';
@@ -28,66 +28,6 @@ const statusStyles: Record<Payment['status'], string> = {
 
 const money = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
-
-function getSampleCertificateDataUrl(dogName?: string, ownerName?: string, breed?: string, vetName?: string): string {
-  const safeDog = dogName || 'Canine';
-  const safeOwner = ownerName || 'Pet Parent';
-  const safeBreed = breed || 'Golden Retriever';
-  const safeVet = vetName || 'Edmonton Companion Animal Hospital';
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1060" width="800" height="1060">
-    <rect width="800" height="1060" fill="#ffffff"/>
-    <rect x="25" y="25" width="750" height="1010" fill="none" stroke="#1e3a8a" stroke-width="4"/>
-    <rect x="35" y="35" width="730" height="990" fill="none" stroke="#93c5fd" stroke-width="1.5"/>
-    <text x="400" y="85" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#1e3a8a" text-anchor="middle">OFFICIAL CANINE VACCINATION CERTIFICATE</text>
-    <text x="400" y="110" font-family="Arial, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">Companion Animal Health &amp; Immunization Registry · Alberta, Canada</text>
-    <line x1="60" y1="130" x2="740" y2="130" stroke="#cbd5e1" stroke-width="2"/>
-    <rect x="60" y="150" width="680" height="140" fill="#f8fafc" stroke="#e2e8f0" rx="8"/>
-    <text x="80" y="180" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#334155">PATIENT &amp; OWNER REGISTRATION</text>
-    <text x="80" y="215" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Patient (Dog):</text>
-    <text x="180" y="215" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#0f172a">${safeDog}</text>
-    <text x="400" y="215" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Breed:</text>
-    <text x="460" y="215" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0f172a">${safeBreed}</text>
-    <text x="80" y="250" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Owner Name:</text>
-    <text x="180" y="250" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#0f172a">${safeOwner}</text>
-    <text x="400" y="250" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Verification:</text>
-    <text x="500" y="250" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#16a34a">Official Record on File</text>
-    <text x="60" y="325" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#334155">CORE IMMUNIZATION DETAILS</text>
-    <rect x="60" y="340" width="680" height="35" fill="#1e3a8a"/>
-    <text x="80" y="363" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff">VACCINE</text>
-    <text x="300" y="363" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff">LOT / REGISTRATION #</text>
-    <text x="500" y="363" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff">EXPIRATION</text>
-    <text x="660" y="363" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff">STATUS</text>
-    <rect x="60" y="375" width="680" height="50" fill="#ffffff" stroke="#e2e8f0"/>
-    <text x="80" y="405" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0f172a">Rabies Core 3-Year</text>
-    <text x="300" y="405" font-family="Arial, sans-serif" font-size="13" fill="#475569">DEF-788219-CA</text>
-    <text x="500" y="405" font-family="Arial, sans-serif" font-size="13" fill="#475569">Valid through 2027</text>
-    <text x="660" y="405" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#16a34a">VALID</text>
-    <rect x="60" y="425" width="680" height="50" fill="#f8fafc" stroke="#e2e8f0"/>
-    <text x="80" y="455" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0f172a">DHPP Combination</text>
-    <text x="300" y="455" font-family="Arial, sans-serif" font-size="13" fill="#475569">PVO-441920-X</text>
-    <text x="500" y="455" font-family="Arial, sans-serif" font-size="13" fill="#475569">Valid through 2027</text>
-    <text x="660" y="455" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#16a34a">VALID</text>
-    <rect x="60" y="475" width="680" height="50" fill="#ffffff" stroke="#e2e8f0"/>
-    <text x="80" y="505" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0f172a">Bordetella Bronchiseptica</text>
-    <text x="300" y="505" font-family="Arial, sans-serif" font-size="13" fill="#475569">BOR-110293-B</text>
-    <text x="500" y="505" font-family="Arial, sans-serif" font-size="13" fill="#475569">Valid through 2027</text>
-    <text x="660" y="505" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#16a34a">VALID</text>
-    <rect x="60" y="560" width="680" height="160" fill="#f8fafc" stroke="#cbd5e1" rx="8"/>
-    <text x="80" y="590" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#334155">LICENSED VETERINARY CLINIC ENDORSEMENT</text>
-    <text x="80" y="625" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Clinic / Hospital:</text>
-    <text x="200" y="625" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0f172a">${safeVet}</text>
-    <text x="80" y="655" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Jurisdiction:</text>
-    <text x="200" y="655" font-family="Arial, sans-serif" font-size="13" fill="#334155">Alberta Veterinary Medical Association (ABVMA)</text>
-    <text x="80" y="685" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Clinical Signature:</text>
-    <text x="200" y="685" font-family="Georgia, serif" font-size="14" font-style="italic" fill="#2563eb">Dr. M. Robertson, DVM · ABVMA Reg #88419</text>
-    <circle cx="650" cy="640" r="42" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-dasharray="5 3"/>
-    <text x="650" y="635" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#16a34a" text-anchor="middle">OFFICIAL</text>
-    <text x="650" y="650" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#16a34a" text-anchor="middle">VET SEAL</text>
-    <text x="400" y="1000" font-family="Arial, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Verified Customer Document · ZoomieVan Mobile Canine Fitness Service</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
 
 interface Enriched {
   user: User;
@@ -130,8 +70,7 @@ export default function AdminUsersPanel() {
       return;
     }
 
-    const rawUrl = viewingCertUser.vaccines?.documentUrl ||
-      (viewingCertUser.vaccines?.rabiesFileName ? getSampleCertificateDataUrl(viewingCertUser.dog?.name, viewingCertUser.name, viewingCertUser.dog?.breed, viewingCertUser.vaccines?.vetName) : null);
+    const rawUrl = viewingCertUser.vaccines?.documentUrl || null;
 
     if (rawUrl) {
       if (rawUrl.startsWith('data:application/pdf') || (rawUrl.startsWith('data:') && viewingCertUser.vaccines?.documentType === 'pdf')) {
@@ -920,14 +859,36 @@ export default function AdminUsersPanel() {
                         <FileText className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">
-                          {viewingUser.user.vaccines?.rabiesFileName || 'rabies_dhpp_certificate.pdf'}
-                        </p>
-                        <p className="text-xs text-dark-400 mt-0.5">
-                          Type: Rabies &amp; DHPP Dual Immunization Certificate
-                        </p>
+                        {viewingUser.user.vaccines?.documentUrl ? (
+                          <>
+                            <p className="text-sm font-bold text-white">
+                              {viewingUser.user.vaccines.rabiesFileName || 'Canine Vaccine Document'}
+                            </p>
+                            <p className="text-xs text-emerald-400 mt-0.5 font-medium">
+                              ✓ Real customer document uploaded and available
+                            </p>
+                          </>
+                        ) : viewingUser.user.vaccines?.rabiesFileName ? (
+                          <>
+                            <p className="text-sm font-bold text-white">
+                              {viewingUser.user.vaccines.rabiesFileName}
+                            </p>
+                            <p className="text-xs text-amber-400 mt-0.5">
+                              ⚠️ File registered prior to document storage (no physical file stored)
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-bold text-dark-300">
+                              No Document Uploaded
+                            </p>
+                            <p className="text-xs text-dark-500 mt-0.5">
+                              Customer has not submitted rabies or DHPP records
+                            </p>
+                          </>
+                        )}
                         <p className="text-[11px] text-dark-400 mt-0.5">
-                          Clinic: {viewingUser.user.vaccines?.vetName || 'Certified Veterinary Hospital'}
+                          Clinic: {viewingUser.user.vaccines?.vetName || 'Not specified'}
                           {viewingUser.user.vaccines?.verifiedAt && (
                             <span className="text-emerald-400 ml-2">
                               · Verified {new Date(viewingUser.user.vaccines.verifiedAt).toLocaleDateString()}
@@ -1144,12 +1105,23 @@ export default function AdminUsersPanel() {
                   ) : (
                     <div className="text-center p-8 max-w-md bg-dark-900/90 rounded-2xl border border-dark-700 space-y-3">
                       <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto">
-                        <FileText className="w-7 h-7" />
+                        <AlertCircle className="w-7 h-7" />
                       </div>
-                      <h5 className="text-base font-bold text-white">No Certificate Uploaded by Customer</h5>
-                      <p className="text-xs text-dark-300 leading-relaxed">
-                        This customer has not uploaded a vaccine certificate yet. Vaccination certificates must be uploaded by the pet owner through their customer account.
-                      </p>
+                      <h5 className="text-base font-bold text-white">No Physical File Stored</h5>
+                      {viewingCertUser.vaccines?.rabiesFileName ? (
+                        <>
+                          <p className="text-xs text-dark-300 leading-relaxed">
+                            File name on record: <code className="text-brand-300 font-mono font-semibold">{viewingCertUser.vaccines.rabiesFileName}</code>
+                          </p>
+                          <p className="text-xs text-dark-400 leading-relaxed">
+                            This user registered a file name before full file storage was enabled, so the actual file content was not preserved on the server. Please ask the customer to re-upload their certificate file from their account dashboard.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-dark-400 leading-relaxed">
+                          This customer has not uploaded a vaccine certificate yet. Certificates must be uploaded by the pet owner through their customer account dashboard.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
