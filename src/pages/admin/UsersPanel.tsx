@@ -118,8 +118,52 @@ export default function AdminUsersPanel() {
   // User Profile Popup Modal State
   const [viewingUser, setViewingUser] = useState<Enriched | null>(null);
   const [viewingCertUser, setViewingCertUser] = useState<User | null>(null);
+  const [blobDocUrl, setBlobDocUrl] = useState<string | null>(null);
   const [verifyingDoc, setVerifyingDoc] = useState(false);
   const [verifyToast, setVerifyToast] = useState<string | null>(null);
+
+  // Safely convert PDF data URLs to Blob URLs so Chromium never blocks the iframe
+  useEffect(() => {
+    let createdUrl: string | null = null;
+    if (!viewingCertUser) {
+      setBlobDocUrl(null);
+      return;
+    }
+
+    const rawUrl = viewingCertUser.vaccines?.documentUrl ||
+      (viewingCertUser.vaccines?.rabiesFileName ? getSampleCertificateDataUrl(viewingCertUser.dog?.name, viewingCertUser.name, viewingCertUser.dog?.breed, viewingCertUser.vaccines?.vetName) : null);
+
+    if (rawUrl) {
+      if (rawUrl.startsWith('data:application/pdf') || (rawUrl.startsWith('data:') && viewingCertUser.vaccines?.documentType === 'pdf')) {
+        try {
+          const parts = rawUrl.split(',');
+          const base64 = parts[1] || parts[0];
+          const binaryStr = atob(base64);
+          const len = binaryStr.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          createdUrl = URL.createObjectURL(blob);
+          setBlobDocUrl(createdUrl);
+        } catch (err) {
+          console.error('Failed to convert base64 PDF to blob:', err);
+          setBlobDocUrl(rawUrl);
+        }
+      } else {
+        setBlobDocUrl(rawUrl);
+      }
+    } else {
+      setBlobDocUrl(null);
+    }
+
+    return () => {
+      if (createdUrl && createdUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(createdUrl);
+      }
+    };
+  }, [viewingCertUser]);
 
   // CRUD Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1007,9 +1051,12 @@ export default function AdminUsersPanel() {
       <AnimatePresence>
         {viewingCertUser && (() => {
           const hasUserDoc = !!viewingCertUser.vaccines?.documentUrl;
-          const activeDocUrl = viewingCertUser.vaccines?.documentUrl ||
-            (viewingCertUser.vaccines?.rabiesFileName ? getSampleCertificateDataUrl(viewingCertUser.dog?.name, viewingCertUser.name, viewingCertUser.dog?.breed, viewingCertUser.vaccines?.vetName) : null);
-          const isPdf = !!(viewingCertUser.vaccines?.documentType === 'pdf' || viewingCertUser.vaccines?.documentUrl?.startsWith('data:application/pdf') || viewingCertUser.vaccines?.rabiesFileName?.toLowerCase().endsWith('.pdf'));
+          const isPdf = !!(
+            viewingCertUser.vaccines?.documentType === 'pdf' ||
+            viewingCertUser.vaccines?.documentUrl?.startsWith('data:application/pdf') ||
+            viewingCertUser.vaccines?.rabiesFileName?.toLowerCase().endsWith('.pdf') ||
+            (blobDocUrl && blobDocUrl.startsWith('blob:'))
+          );
 
           return (
             <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
@@ -1046,12 +1093,12 @@ export default function AdminUsersPanel() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {activeDocUrl && (
+                    {blobDocUrl && (
                       <a
-                        href={activeDocUrl}
+                        href={blobDocUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-xl bg-dark-700 hover:bg-dark-600 text-xs font-semibold text-white flex items-center gap-1.5 transition"
+                        className="px-3 py-1.5 rounded-xl bg-brand-500/20 hover:bg-brand-500/30 text-xs font-bold text-brand-300 border border-brand-500/30 flex items-center gap-1.5 transition"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Open Full Size</span>
@@ -1070,19 +1117,25 @@ export default function AdminUsersPanel() {
 
                 {/* Document Viewing Area */}
                 <div className="p-4 sm:p-6 bg-dark-950 flex-1 overflow-auto flex flex-col items-center justify-center min-h-[50vh] max-h-[70vh]">
-                  {activeDocUrl ? (
+                  {blobDocUrl ? (
                     isPdf ? (
-                      <div className="w-full h-full min-h-[62vh] rounded-2xl overflow-hidden border border-dark-700 bg-white shadow-xl">
-                        <iframe
-                          src={activeDocUrl}
-                          className="w-full h-full border-0 bg-white"
-                          title="Vaccine Certificate PDF"
-                        />
+                      <div className="w-full h-full min-h-[62vh] rounded-2xl overflow-hidden border border-dark-700 bg-white shadow-xl relative">
+                        <object
+                          data={blobDocUrl}
+                          type="application/pdf"
+                          className="w-full h-full min-h-[62vh]"
+                        >
+                          <iframe
+                            src={blobDocUrl}
+                            className="w-full h-full min-h-[62vh] border-0 bg-white"
+                            title="Vaccine Certificate PDF"
+                          />
+                        </object>
                       </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center p-2">
                         <img
-                          src={activeDocUrl}
+                          src={blobDocUrl}
                           alt={`Vaccination Document for ${viewingCertUser.dog?.name || 'Canine'}`}
                           className="max-h-[62vh] max-w-full rounded-2xl object-contain shadow-2xl border border-dark-700 bg-white"
                         />
