@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Check, Heart, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
+import { isFullLaunchActive } from '../lib/launchConfig';
 
 // `sessionCountFeature` is split out so it can be suppressed when the Founding
 // Member bonus applies — otherwise the card would claim 2 runs next to a badge
@@ -209,6 +210,21 @@ export default function BookNow() {
                       </li>
                     ))}
                   </ul>
+
+                  {!isFullLaunchActive() && (
+                    <div className="mt-4 pt-3 border-t border-dark-100">
+                      {isTrial ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg">
+                          <Sparkles className="w-3 h-3 text-emerald-600" />
+                          Early Access Open Now
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2.5 py-1 rounded-lg">
+                          🔒 Unlocks Sept 4 @ 11:11 AM
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -223,10 +239,20 @@ export default function BookNow() {
         >
           <button
             onClick={() => navigate(user ? '/dashboard' : '/signup')}
-            className="group inline-flex items-center gap-2.5 rounded-2xl bg-brand-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600"
+            className={`group inline-flex items-center gap-2.5 rounded-2xl px-8 py-4 text-sm font-bold text-white shadow-xl transition hover:-translate-y-0.5 ${
+              !isFullLaunchActive()
+                ? 'bg-gradient-to-r from-amber-500 via-brand-500 to-amber-500 hover:from-amber-400 hover:to-brand-400 shadow-amber-500/25'
+                : 'bg-brand-500 hover:bg-brand-600 shadow-brand-500/25'
+            }`}
           >
-            <ShieldCheck className="h-4 w-4" />
-            {user ? 'Book a session' : 'Create account to book'}
+            {!isFullLaunchActive() ? <Star className="h-4 w-4 fill-white" /> : <ShieldCheck className="h-4 w-4" />}
+            {!isFullLaunchActive()
+              ? user
+                ? 'Enter Founding Member Early Access'
+                : 'Claim Founding Member Early Access'
+              : user
+                ? 'Book a session'
+                : 'Create account to book'}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </button>
           <p className="mt-3 text-sm text-white/75">

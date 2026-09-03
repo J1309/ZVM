@@ -18,6 +18,7 @@ import AboutPage from './pages/AboutPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProductionReadinessGate from './components/ProductionReadinessGate';
 import ComingSoonModal from './components/ComingSoonModal';
+import LaunchCelebrationBanner from './components/LaunchCelebrationBanner';
 import AuthRedirect from './components/AuthRedirect';
 import { isProductionBackendReady, isProductionBuild } from './lib/runtime';
 import LandingSkeleton from './components/LandingSkeleton';
@@ -121,6 +122,7 @@ function LandingPage() {
           <Navbar />
 
           <Hero />
+          <LaunchCelebrationBanner />
           <HomeAboutPreview />
           <HowItWorks />
           <BookNow />

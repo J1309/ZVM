@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, DollarSign, Activity, MapPinned, Star } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Activity, MapPinned, Star, Rocket, Clock, CheckCircle2 } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
 import { getAllVans } from '../../lib/repositories/fleetRepository';
 import { getAllZones } from '../../lib/repositories/fsaRepository';
 import { getAllVaccines } from '../../lib/repositories/vaccineRepository';
 import { Booking, FleetVan, FSARecord, VaccineRecord } from '../../lib/types';
 import { getFoundingMemberStats, setFoundingOfferClosed, FoundingMemberStats } from '../../lib/foundingMembers';
+import {
+  getTimeUntilLaunch,
+  isFullLaunchActive,
+  setAdminFullLaunchOverride,
+  getAdminFullLaunchOverride,
+  CountdownState,
+  LAUNCH_TIME_LABEL_CANADIAN,
+} from '../../lib/launchConfig';
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -14,6 +22,9 @@ export default function AdminDashboard() {
   const [zones, setZones] = useState<FSARecord[]>([]);
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
   const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
+  const [countdown, setCountdown] = useState<CountdownState>(() => getTimeUntilLaunch());
+  const [isFullLaunch, setIsFullLaunch] = useState<boolean>(() => isFullLaunchActive());
+  const [manualOverrideActive, setManualOverrideActive] = useState<boolean>(() => getAdminFullLaunchOverride());
   const [offerSaving, setOfferSaving] = useState(false);
   const [offerError, setOfferError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,7 +40,22 @@ export default function AdminDashboard() {
         setLoading(false);
       }
     );
+
+    const timer = setInterval(() => {
+      setCountdown(getTimeUntilLaunch());
+      setIsFullLaunch(isFullLaunchActive());
+      getFoundingMemberStats().then(setFoundingStats).catch(() => {});
+    }, 2000);
+
+    return () => clearInterval(timer);
   }, []);
+
+  const handleToggleFullLaunch = () => {
+    const nextState = !isFullLaunch;
+    setAdminFullLaunchOverride(nextState);
+    setIsFullLaunch(nextState);
+    setManualOverrideActive(nextState);
+  };
 
   if (loading) {
     return (
@@ -65,6 +91,139 @@ export default function AdminDashboard() {
         <h2 className="text-2xl font-display font-bold text-white">Dashboard</h2>
         <p className="text-dark-300 text-sm mt-1">Real-time overview of your ZoomieVan operations.</p>
       </div>
+
+      {/* 🚀 Launch Operations & Early Access Command Center */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="p-6 rounded-2xl bg-gradient-to-r from-dark-850 via-dark-800 to-dark-850 border-2 border-brand-500/40 shadow-2xl space-y-5"
+      >
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-dark-700/80">
+          <div>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="px-3 py-1 rounded-full bg-brand-500/20 border border-brand-500/40 text-brand-300 font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Rocket className="w-3.5 h-3.5 text-brand-400" />
+                Launch Celebration &amp; Access Control
+              </span>
+              <span className={`px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 ${
+                isFullLaunch
+                  ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-500/15 border border-amber-500/40 text-amber-300'
+              }`}>
+                {isFullLaunch ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Full Launch Active (All Packages Unlocked)
+                  </>
+                ) : (
+                  <>
+                    <Star className="w-3.5 h-3.5 fill-amber-400" /> Early Access Mode (Founding Members Only)
+                  </>
+                )}
+              </span>
+            </div>
+            <h3 className="font-display text-xl font-black text-white">
+              Official Launch: {LAUNCH_TIME_LABEL_CANADIAN}
+            </h3>
+            <p className="text-xs text-dark-300 mt-0.5">
+              Target Timezone: Edmonton / Mountain Daylight Time (MDT). All normal pricing packages unlock automatically at countdown expiry.
+            </p>
+          </div>
+
+          {/* Quick Pre-Launch Override Control */}
+          <div className="flex flex-col items-start lg:items-end gap-1.5 w-full lg:w-auto">
+            <button
+              onClick={handleToggleFullLaunch}
+              className={`w-full lg:w-auto px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
+                isFullLaunch
+                  ? 'bg-dark-700 hover:bg-dark-600 text-dark-200 border border-dark-500'
+                  : 'bg-gradient-to-r from-brand-600 via-amber-500 to-brand-600 hover:from-brand-500 hover:to-amber-400 text-white shadow-brand-500/20'
+              }`}
+            >
+              <Rocket className="w-4 h-4" />
+              <span>
+                {isFullLaunch
+                  ? 'Revert to Early Access Only'
+                  : 'Activate Full Launch Now (Unlock All Plans)'}
+              </span>
+            </button>
+            <span className="text-[11px] text-dark-400">
+              {manualOverrideActive
+                ? '⚡ Manual override is active.'
+                : '💡 You can click to unlock normal pricing 5 min before 11:11 AM, or let the timer do it.'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Countdown Clock */}
+          <div className="p-4 rounded-xl bg-dark-900/80 border border-dark-700/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-dark-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-brand-400" />
+                Launch Countdown Clock
+              </span>
+              <span className="text-[11px] font-semibold text-brand-400">
+                {countdown.isLive ? 'Countdown Reached!' : 'Ticking Live'}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {[
+                { label: 'Days', val: countdown.days },
+                { label: 'Hours', val: countdown.hours },
+                { label: 'Mins', val: countdown.minutes },
+                { label: 'Secs', val: countdown.seconds },
+              ].map((unit) => (
+                <div key={unit.label} className="bg-dark-800 border border-dark-600 rounded-lg py-2 px-1 text-center">
+                  <span className="font-display font-black text-xl sm:text-2xl text-white tabular-nums block">
+                    {String(unit.val).padStart(2, '0')}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-dark-400 block">
+                    {unit.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Real-time Founding Member Live Capping Status */}
+          <div className="p-4 rounded-xl bg-dark-900/80 border border-dark-700/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 fill-amber-400" />
+                Real-Time Founding Members (50 Cap)
+              </span>
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                {(foundingStats?.remainingCount ?? 47) <= 0 ? '🛑 Auto-Capped' : '🟢 Live Auto-Cap Active'}
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="font-display text-2xl font-black text-white tabular-nums">
+                  {foundingStats?.claimedCount ?? 3}
+                </span>
+                <span className="text-xs text-dark-400 font-bold ml-1">/ 50 Claimed</span>
+              </div>
+              <span className="text-xs font-extrabold text-amber-300 tabular-nums">
+                {foundingStats?.remainingCount ?? 47} Spots Remaining
+              </span>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full h-2.5 bg-dark-800 rounded-full overflow-hidden border border-dark-600">
+              <div
+                className="h-full bg-gradient-to-r from-amber-500 via-brand-500 to-emerald-400 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, (((foundingStats?.claimedCount ?? 3) / 50) * 100))}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-dark-400 leading-tight">
+              {(foundingStats?.remainingCount ?? 47) <= 0
+                ? 'All 50 spots claimed! The system has automatically stopped the founding early access promotion.'
+                : 'The system updates this count in real time. Once all 50 spots are claimed, early access automatically stops.'}
+            </p>
+          </div>
+        </div>
+      </motion.div>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((stat, i) => (
           <motion.div

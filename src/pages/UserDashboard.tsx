@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2 } from 'lucide-react';
+import { User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save, Loader2, CreditCard, Upload, FileText, CheckCircle2, Sparkles, Star, Clock } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
 import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
+import { isFullLaunchActive, getTimeUntilLaunch, CountdownState, LAUNCH_TIME_LABEL_CANADIAN } from '../lib/launchConfig';
 import PickupWindowPicker from '../components/PickupWindowPicker';
 import { addVaccine } from '../lib/repositories/vaccineRepository';
 
@@ -43,6 +44,8 @@ export default function UserDashboard() {
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [submittingAgreement, setSubmittingAgreement] = useState(false);
   const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
+  const [countdown, setCountdown] = useState<CountdownState>(() => getTimeUntilLaunch());
+  const [fullLaunchActive, setFullLaunchActive] = useState<boolean>(() => isFullLaunchActive());
 
   const checkoutStatus = new URLSearchParams(window.location.search).get('checkout');
 
@@ -51,7 +54,22 @@ export default function UserDashboard() {
     getFoundingMemberStats()
       .then(s => { if (active) setFoundingStats(s); })
       .catch(() => { if (active) setFoundingStats(null); });
-    return () => { active = false; };
+
+    const timer = setInterval(() => {
+      setCountdown(getTimeUntilLaunch());
+      setFullLaunchActive(isFullLaunchActive());
+    }, 1000);
+
+    const handleLaunchChange = () => {
+      setFullLaunchActive(isFullLaunchActive());
+    };
+    window.addEventListener('zoomievan_launch_mode_changed', handleLaunchChange);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('zoomievan_launch_mode_changed', handleLaunchChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -252,6 +270,10 @@ export default function UserDashboard() {
 
   // Switching plans changes how many sessions are required, so clear picks.
   const changePlan = (key: StripePlanKey) => {
+    if (!fullLaunchActive && key !== 'trial_run') {
+      setCheckoutError('Regular packages unlock at official launch (September 4 at 11:11 AM MDT). Early access is currently open exclusively for Founding Members (Trial Run)!');
+      return;
+    }
     setSelectedPlan(key);
     setPickedSessions([]);
     setSessionsConfirmed(false);
@@ -263,6 +285,14 @@ export default function UserDashboard() {
   };
 
   const startCheckout = async () => {
+    if (!fullLaunchActive && selectedPlan !== 'trial_run') {
+      setCheckoutError('Only the Founding Member Trial Run package is available during early access.');
+      return;
+    }
+    if (!fullLaunchActive && foundingStats && foundingStats.remainingCount <= 0) {
+      setCheckoutError('All 50 Founding Member spots have been claimed. General booking unlocks on September 4th at 11:11 AM.');
+      return;
+    }
     if (!sessionsConfirmed || pickedSessions.length !== requiredCount) {
       setCheckoutError('Confirm your sessions before checkout.');
       return;
@@ -493,26 +523,66 @@ export default function UserDashboard() {
           </div>
         </motion.div>
 
-        {/* Operational Notice Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500/20 via-brand-500/25 to-amber-500/20 border border-amber-400/50 text-white shadow-xl text-center"
-        >
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <span className="px-3 py-1 rounded-full bg-amber-400 text-black font-black text-xs uppercase tracking-wider shrink-0 shadow-md">
-              🚀 PRE-LAUNCH PREPARATION
-            </span>
-            <span className="font-bold text-sm sm:text-base text-amber-200">
-              Session bookings &amp; online payments are currently paused as ZoomieVan prepares for live operations.
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-dark-300">
-            Subscription tabs, session scheduling windows, and payment options remain visible below for preview purposes.
-          </p>
-        </motion.div>
+        {/* Launch Celebration & Early Access Status Banner */}
+        {!fullLaunchActive ? (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500/20 via-brand-500/25 to-amber-500/20 border border-amber-400/50 text-white shadow-xl"
+          >
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+              <div>
+                <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap mb-1">
+                  <span className="px-3 py-1 rounded-full bg-amber-400 text-black font-black text-xs uppercase tracking-wider shrink-0 shadow-md flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    FOUNDING MEMBER EARLY ACCESS
+                  </span>
+                  <span className="text-xs text-amber-200 font-bold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-brand-400" />
+                    Official Launch: {LAUNCH_TIME_LABEL_CANADIAN}
+                  </span>
+                </div>
+                <h3 className="font-display text-lg sm:text-xl font-bold text-white">
+                  Early Access is Open for Founding Members
+                </h3>
+                <p className="text-xs text-dark-300 mt-1 max-w-xl">
+                  Only the <strong className="text-amber-300">Founding Member Trial Run</strong> (3 runs for $70 CAD) is currently active for booking. Regular plans unlock at 11:11 AM on September 4th.
+                </p>
+              </div>
 
-        <div className="pointer-events-none opacity-75 select-none">
+              {/* Countdown Flip Cards */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {[
+                  { label: 'Days', val: countdown.days },
+                  { label: 'Hrs', val: countdown.hours },
+                  { label: 'Mins', val: countdown.minutes },
+                  { label: 'Secs', val: countdown.seconds },
+                ].map((u) => (
+                  <div key={u.label} className="bg-dark-900/90 border border-dark-600 px-2.5 py-2 rounded-xl text-center min-w-[50px]">
+                    <span className="font-display font-black text-lg text-white tabular-nums block">{String(u.val).padStart(2, '0')}</span>
+                    <span className="text-[9px] uppercase font-bold text-dark-400 block">{u.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-white flex items-center gap-3"
+          >
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-emerald-200">🚀 Official Launch is Live!</p>
+              <p className="text-xs text-dark-300">All fitness packages and custom scheduling windows are now open.</p>
+            </div>
+          </motion.div>
+        )}
+
+        <div>
           {/* Step 1 — Choose your plan */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -533,16 +603,30 @@ export default function UserDashboard() {
               const isSelected = selectedPlan === plan.key;
               const planIsFounding = plan.key === 'trial_run' && !!foundingStats?.isOfferActive;
               const planSessions = plan.sessionsCount + (planIsFounding ? (foundingStats?.bonusSessions ?? 0) : 0);
+              const isLocked = !fullLaunchActive && plan.key !== 'trial_run';
+
               return (
                 <label
                   key={plan.key}
-                  onClick={() => !sessionsConfirmed && changePlan(plan.key)}
+                  onClick={() => {
+                    if (isLocked) {
+                      setCheckoutError('Regular packages unlock at official launch (September 4 at 11:11 AM MDT). Subscribe with Founding Member Early Access below!');
+                      return;
+                    }
+                    if (!sessionsConfirmed) changePlan(plan.key);
+                  }}
                   className={`relative flex flex-col justify-between rounded-2xl p-4 transition-all ${
-                    sessionsConfirmed ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                    isLocked
+                      ? 'cursor-not-allowed opacity-50 border border-dark-700 bg-dark-900/40'
+                      : sessionsConfirmed
+                        ? 'cursor-not-allowed opacity-60'
+                        : 'cursor-pointer'
                   } ${
                     isSelected
                       ? 'border-2 border-brand-500 bg-gradient-to-b from-brand-500/15 via-dark-800 to-dark-800 shadow-lg shadow-brand-500/10 ring-1 ring-brand-500/30'
-                      : 'border border-dark-600 bg-dark-900/60 hover:border-dark-400 hover:bg-dark-800/80'
+                      : !isLocked
+                        ? 'border border-dark-600 bg-dark-900/60 hover:border-dark-400 hover:bg-dark-800/80'
+                        : ''
                   }`}
                 >
                   <div>
@@ -554,8 +638,8 @@ export default function UserDashboard() {
                           name="stripe_plan"
                           value={plan.key}
                           checked={isSelected}
-                          disabled={sessionsConfirmed}
-                          onChange={() => changePlan(plan.key)}
+                          disabled={sessionsConfirmed || isLocked}
+                          onChange={() => !isLocked && changePlan(plan.key)}
                           className="sr-only"
                         />
                         <div className={`h-5 w-5 rounded-full border-2 transition-all flex items-center justify-center ${
@@ -573,8 +657,14 @@ export default function UserDashboard() {
 
                     <p className="text-xs text-dark-300 leading-relaxed min-h-[36px]">{plan.summary}</p>
                     {planIsFounding && (
-                      <p className="mt-1.5 text-[10px] font-black uppercase tracking-wide text-amber-300">
-                        ⭐ Founding Member: +1 free session
+                      <p className="mt-1.5 text-[10px] font-black uppercase tracking-wide text-amber-300 flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
+                        Founding Member: +1 free run
+                      </p>
+                    )}
+                    {isLocked && (
+                      <p className="mt-2 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md">
+                        🔒 Unlocks Sept 4 @ 11:11 AM
                       </p>
                     )}
                   </div>
@@ -728,12 +818,23 @@ export default function UserDashboard() {
           )}
           <button
             onClick={startCheckout}
-            disabled={checkoutPlan !== null || !hasCurrentConsent || !hasDog || !sessionsConfirmed}
+            disabled={
+              checkoutPlan !== null ||
+              !hasCurrentConsent ||
+              !hasDog ||
+              !sessionsConfirmed ||
+              (!fullLaunchActive && (foundingStats?.remainingCount ?? 1) <= 0)
+            }
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:from-brand-500 hover:to-brand-400 disabled:opacity-60"
           >
             {checkoutPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
             Pay ${currentPlan.price} with Stripe
           </button>
+          {!fullLaunchActive && (foundingStats?.remainingCount ?? 1) <= 0 && (
+            <p className="mt-3 text-xs text-amber-300 font-semibold text-center">
+              All 50 Founding Member spots have been claimed! General packages unlock September 4th at 11:11 AM.
+            </p>
+          )}
           {checkoutError && <p className="mt-3 text-sm text-red-300">{checkoutError}</p>}
         </motion.div>
         </div>
