@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  User, PawPrint, ShieldCheck, MapPinned, LogOut, ChevronRight, Plus, X, Save,
+  User, PawPrint, ShieldCheck, LogOut, Plus, X, Save,
   Loader2, CreditCard, Upload, FileText, CheckCircle2, Sparkles, Star, Clock,
-  PhoneCall, AlertCircle, ExternalLink, ShieldAlert, Trash2, Calendar, Settings,
-  Check, Lock, ChevronDown, RefreshCw, AlertTriangle, Shield
+  PhoneCall, AlertCircle, ExternalLink, Trash2, Calendar, Settings,
+  Lock, RefreshCw, AlertTriangle, Shield
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';

@@ -4,7 +4,7 @@ import {
   Users, Search, ChevronDown, Mail, Phone, MapPin, Dog,
   CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save,
   Eye, FileText, Check, XCircle, DollarSign,
-  ExternalLink, FileCheck2, Shield, AlertCircle, Loader2
+  ExternalLink, FileCheck2, Shield, AlertCircle, Loader2, Sparkles
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUser, deleteUser, verifyAccount } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';

@@ -46,7 +46,9 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       legalAccepted,
       legalAcceptedAt,
       legalVersion,
-      ...safeUpdates
+      profileSubmittedAt,
+      accountVerifiedAt,
+      ...otherUpdates
     } = updates;
     void _id;
     void createdAt;
@@ -58,7 +60,16 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
     void legalAccepted;
     void legalAcceptedAt;
     void legalVersion;
-    return convex.mutation(api.users.update, { id: id as any, updates: safeUpdates });
+
+    const safeUpdates: Record<string, any> = { ...otherUpdates };
+    if (profileSubmittedAt !== undefined) {
+      safeUpdates.profileSubmittedAt = profileSubmittedAt ? new Date(profileSubmittedAt).getTime() : null;
+    }
+    if (accountVerifiedAt !== undefined) {
+      safeUpdates.accountVerifiedAt = accountVerifiedAt ? new Date(accountVerifiedAt).getTime() : null;
+    }
+
+    return convex.mutation(api.users.update, { id: id as any, updates: safeUpdates as any });
   }
 
   const users = getItem<User[]>(KEY) ?? [];

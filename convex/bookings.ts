@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { requireAdmin, requireUser } from "./auth";
+import { requireAdmin } from "./auth";
 
 // Active bookings hold a slot; cancelled ones release it.
 // Pending bookings expire after 15 minutes if payment is not completed.

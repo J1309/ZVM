@@ -94,6 +94,7 @@ export async function createManualBooking(booking: Omit<Booking, 'id' | 'created
         status: booking.status,
       },
     });
+    if (!created) throw new Error('Failed to create booking');
     return { ...booking, id: created._id, createdAt: new Date(created.createdAt).toISOString() };
   }
   const bookings = getItem<Booking[]>(KEY) ?? [];

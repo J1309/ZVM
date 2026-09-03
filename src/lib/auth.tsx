@@ -148,6 +148,12 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   }, [user]);
 
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_TIME_KEY);
+    setUser(null);
+  }, []);
+
   const deleteAccount = useCallback(async () => {
     await deleteSelfRepo();
     logout();
@@ -159,12 +165,6 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     const fresh = await getUserById(user.id);
     if (fresh) setUser(fresh);
   }, [user]);
-
-  const logout = useCallback(() => {
-    sessionStorage.removeItem(SESSION_KEY);
-    sessionStorage.removeItem(SESSION_TIME_KEY);
-    setUser(null);
-  }, []);
 
   return (
     <AuthCtx.Provider value={{
@@ -272,6 +272,12 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   }, []);
 
+  const logout = useCallback(() => {
+    setUser(null);
+    setAuthError(null);
+    void signOut({ redirectUrl: '/' });
+  }, [signOut]);
+
   const deleteAccount = useCallback(async () => {
     await deleteSelfRepo();
     logout();
@@ -280,12 +286,6 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     retrySync();
   }, [retrySync]);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    setAuthError(null);
-    void signOut({ redirectUrl: '/' });
-  }, [signOut]);
 
   return (
     <AuthCtx.Provider value={{

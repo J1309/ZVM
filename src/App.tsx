@@ -80,19 +80,22 @@ function LandingPage() {
   useEffect(() => {
     const img = new Image();
     img.src = '/images/hero-rottweiler-van.jpg';
-    landingModules.then(() => setModulesReady(true));
+    landingModules
+      .then(() => setModulesReady(true))
+      .catch((err) => {
+        console.warn('Landing module preload:', err);
+        setModulesReady(true);
+      });
   }, []);
 
   const handlePreloaderComplete = () => {
     setIsLoading(false);
-    if (modulesReady) {
-      setTimeout(() => setShowContent(true), 100);
-    }
+    setShowContent(true);
   };
 
   useEffect(() => {
     if (modulesReady && !isLoading) {
-      setTimeout(() => setShowContent(true), 100);
+      setShowContent(true);
     }
   }, [modulesReady, isLoading]);
 
