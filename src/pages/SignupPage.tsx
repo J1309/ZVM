@@ -5,6 +5,7 @@ import { User, PenTool, Check, ChevronRight, ArrowLeft, Loader2, Eye, EyeOff, Pa
 import { SignUp } from '@clerk/react';
 import { useAuth } from '../lib/auth';
 import { UserAddress } from '../lib/types';
+import { isPrivilegedAdminEmail } from '../lib/repositories/userRepository';
 
 const steps = [
   { step: 1, icon: User, title: 'Your Profile', subtitle: 'Account and route details' },
@@ -55,8 +56,8 @@ export default function SignupPage() {
               routing="path"
               path="/signup"
               signInUrl="/login"
-              forceRedirectUrl="/dashboard"
-              fallbackRedirectUrl="/dashboard"
+              forceRedirectUrl="/auth/redirect"
+              fallbackRedirectUrl="/auth/redirect"
             />
           </section>
         </div>
@@ -81,7 +82,7 @@ export default function SignupPage() {
   const navigate = useNavigate();
 
   // Already signed in (and not in the middle of celebrating signup success):
-  if (user && !signupSuccess) return <Navigate to="/dashboard" replace />;
+  if (user && !signupSuccess) return <Navigate to={user.role === 'admin' || isPrivilegedAdminEmail(user.email) ? '/admin' : '/dashboard'} replace />;
 
   const canProceed = () => {
     switch (activeStep) {
@@ -159,10 +160,10 @@ export default function SignupPage() {
 
           <div className="pt-2">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(isPrivilegedAdminEmail(email) ? '/admin' : '/dashboard')}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-2"
             >
-              <span>Continue to Your Dashboard</span>
+              <span>{isPrivilegedAdminEmail(email) ? 'Continue to Admin Panel' : 'Continue to Your Dashboard'}</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

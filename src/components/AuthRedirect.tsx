@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { useUser as useClerkUser } from '@clerk/react';
 import { Loader2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
+import { isPrivilegedAdminEmail } from '../lib/repositories/userRepository';
 
 export default function AuthRedirect() {
   const { user, loading, authError, retrySync, logout } = useAuth();
@@ -20,7 +21,7 @@ export default function AuthRedirect() {
   }
 
   if (user) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+    return <Navigate to={user.role === 'admin' || isPrivilegedAdminEmail(user.email) ? '/admin' : '/dashboard'} replace />;
   }
 
   // If Clerk is signed in but user doc hasn't synced or encountered a sync error,
