@@ -57,6 +57,15 @@ export default defineSchema({
     accountVerified: v.optional(v.boolean()),
     accountVerifiedAt: v.optional(v.union(v.number(), v.null())),
     accountVerifiedBy: v.optional(v.union(v.string(), v.null())),
+    assignedSessionDate: v.optional(v.string()),
+    assignedTimeSlot: v.optional(v.string()),
+    assignedNotes: v.optional(v.string()),
+    callConfirmed: v.optional(v.boolean()),
+    callConfirmedAt: v.optional(v.union(v.number(), v.null())),
+    assignedBy: v.optional(v.union(v.string(), v.null())),
+    hasPaid: v.optional(v.boolean()),
+    paidAt: v.optional(v.union(v.number(), v.null())),
+    paidPlanName: v.optional(v.string()),
     ...timestampFields,
   })
     .index("by_email", ["email"])

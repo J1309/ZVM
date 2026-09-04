@@ -4,7 +4,8 @@ import {
   Users, Search, ChevronDown, Mail, Phone, MapPin, Dog,
   CheckCircle2, Clock, ShieldCheck, ShieldAlert, Plus, Edit2, Trash2, X, Save,
   Eye, FileText, Check, XCircle, DollarSign,
-  ExternalLink, FileCheck2, Shield, AlertCircle, Loader2, Sparkles
+  ExternalLink, FileCheck2, Shield, AlertCircle, Loader2, Sparkles,
+  Calendar, PhoneCall
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUser, deleteUser, verifyAccount } from '../../lib/repositories/userRepository';
 import { getAllPayments } from '../../lib/repositories/paymentRepository';
@@ -46,6 +47,18 @@ const emptyUserForm = {
   password: 'Password123!',
 };
 
+const STANDARD_TIME_SLOTS = [
+  'Session 1 (9:00 AM – 10:00 AM)',
+  'Session 2 (10:00 AM – 11:00 AM)',
+  'Session 3 (11:00 AM – 12:00 PM)',
+  'Session 4 (1:00 PM – 2:00 PM)',
+  'Session 5 (2:00 PM – 3:00 PM)',
+  'Session 6 (3:00 PM – 4:00 PM)',
+  'Session 7 (4:00 PM – 5:00 PM)',
+];
+
+type QueueFilter = 'all' | 'needs_call' | 'scheduled_unpaid' | 'paid' | 'incomplete';
+
 export default function AdminUsersPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -53,7 +66,16 @@ export default function AdminUsersPanel() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'customer' | 'admin'>('all');
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Review & Schedule Modal State
+  const [schedulingUser, setSchedulingUser] = useState<User | null>(null);
+  const [scheduledDate, setScheduledDate] = useState<string>('');
+  const [scheduledTimeSlot, setScheduledTimeSlot] = useState<string>('Session 2 (10:00 AM – 11:00 AM)');
+  const [callConfirmed, setCallConfirmed] = useState<boolean>(true);
+  const [scheduleNotes, setScheduleNotes] = useState<string>('');
+  const [savingSchedule, setSavingSchedule] = useState<boolean>(false);
 
   // User Profile Popup Modal State
   const [viewingUser, setViewingUser] = useState<Enriched | null>(null);
@@ -150,9 +172,32 @@ export default function AdminUsersPanel() {
         (user.phone && user.phone.includes(q)) ||
         (user.dog?.name && user.dog.name.toLowerCase().includes(q)) ||
         (user.address?.postalCode && user.address.postalCode.toLowerCase().includes(q));
-      return matchesRole && matchesQuery;
+
+      let matchesQueue = true;
+      if (queueFilter === 'needs_call') {
+        matchesQueue = !!user.profileCompleted && !user.accountVerified;
+      } else if (queueFilter === 'scheduled_unpaid') {
+        matchesQueue = !!user.accountVerified && !user.hasPaid;
+      } else if (queueFilter === 'paid') {
+        matchesQueue = !!user.hasPaid;
+      } else if (queueFilter === 'incomplete') {
+        matchesQueue = !user.profileCompleted;
+      }
+
+      return matchesRole && matchesQuery && matchesQueue;
     });
-  }, [enriched, query, roleFilter]);
+  }, [enriched, query, roleFilter, queueFilter]);
+
+  const queueCounts = useMemo(() => {
+    const customers = users.filter(u => u.role !== 'admin');
+    return {
+      all: users.length,
+      needs_call: customers.filter(u => u.profileCompleted && !u.accountVerified).length,
+      scheduled_unpaid: customers.filter(u => u.accountVerified && !u.hasPaid).length,
+      paid: customers.filter(u => u.hasPaid).length,
+      incomplete: customers.filter(u => !u.profileCompleted).length,
+    };
+  }, [users]);
 
   // Helper to determine certificate status for a user
   const getCertStatus = (u: User) => {
@@ -285,6 +330,79 @@ export default function AdminUsersPanel() {
       alert('Failed to update account verification.');
     } finally {
       setVerifyingDoc(false);
+    }
+  };
+
+  const handleOpenScheduleModal = (u: User) => {
+    setSchedulingUser(u);
+    if (u.assignedSessionDate) {
+      setScheduledDate(u.assignedSessionDate);
+    } else {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + 2);
+      setScheduledDate(targetDate.toISOString().split('T')[0]);
+    }
+    setScheduledTimeSlot(u.assignedTimeSlot || 'Session 2 (10:00 AM – 11:00 AM)');
+    setCallConfirmed(u.callConfirmed ?? true);
+    setScheduleNotes(u.assignedNotes || '');
+  };
+
+  const handleSaveScheduleAndVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schedulingUser) return;
+    if (!scheduledDate) {
+      alert('Please specify a session date.');
+      return;
+    }
+    if (!callConfirmed) {
+      alert('Please confirm the date with the customer via phone call before granting verification.');
+      return;
+    }
+
+    setSavingSchedule(true);
+    try {
+      await verifyAccount(schedulingUser.id, true, {
+        assignedSessionDate: scheduledDate,
+        assignedTimeSlot: scheduledTimeSlot,
+        assignedNotes: scheduleNotes.trim() || undefined,
+        callConfirmed: true,
+      });
+
+      if (schedulingUser.vaccines && schedulingUser.vaccines.status !== 'approved') {
+        try {
+          await handleVerifyCertificate(schedulingUser, 'approved');
+        } catch (cErr) {
+          console.warn('Auto-approving certificate alongside verification:', cErr);
+        }
+      }
+
+      const nowIso = new Date().toISOString();
+      const updatedUser: User = {
+        ...schedulingUser,
+        accountVerified: true,
+        accountVerifiedAt: nowIso,
+        accountVerifiedBy: 'Admin',
+        assignedSessionDate: scheduledDate,
+        assignedTimeSlot: scheduledTimeSlot,
+        assignedNotes: scheduleNotes.trim() || undefined,
+        callConfirmed: true,
+        callConfirmedAt: nowIso,
+        assignedBy: 'Admin',
+      };
+
+      setUsers(prev => prev.map(u => u.id === schedulingUser.id ? updatedUser : u));
+      if (viewingUser && viewingUser.user.id === schedulingUser.id) {
+        setViewingUser({ ...viewingUser, user: updatedUser });
+      }
+
+      setSchedulingUser(null);
+      setVerifyToast(`Session scheduled on ${scheduledDate} (${scheduledTimeSlot}) for ${updatedUser.name}! Account verified & payment unlocked.`);
+      setTimeout(() => setVerifyToast(null), 5000);
+    } catch (err) {
+      console.error('Failed to schedule & verify:', err);
+      alert('Failed to save schedule and grant verification.');
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -424,6 +542,163 @@ export default function AdminUsersPanel() {
         </div>
       </div>
 
+      {/* ========================================================================= */}
+      {/* 🚀 DEDICATED SECTION: ONBOARDING, CLEARANCE & SCHEDULING QUEUE HUB         */}
+      {/* ========================================================================= */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-dark-850 via-dark-800 to-dark-850 border-2 border-brand-500/30 shadow-2xl space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-dark-700/60 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-500 to-amber-500 p-0.5 shadow-lg shadow-brand-500/20 shrink-0">
+              <div className="w-full h-full rounded-[14px] bg-dark-900 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-brand-400" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg font-display font-extrabold text-white">
+                  Clearance &amp; Onboarding Queue
+                </h3>
+                {queueCounts.needs_call > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse flex items-center gap-1">
+                    <PhoneCall className="w-3 h-3" />
+                    {queueCounts.needs_call} To Call &amp; Clear
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-dark-300">
+                Review submitted canine profiles, call customer to lock in session date, grant account clearance, and unlock Founding Member payment.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-xs text-dark-400 font-mono bg-dark-900/80 px-3 py-1.5 rounded-xl border border-dark-700 self-start md:self-auto shrink-0">
+            Flow: Register → Profile → Call &amp; Date → Verify → Pay ($70) → Confirmed
+          </div>
+        </div>
+
+        {/* 4 Interactive Queue Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            type="button"
+            onClick={() => setQueueFilter(queueFilter === 'needs_call' ? 'all' : 'needs_call')}
+            className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
+              queueFilter === 'needs_call'
+                ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-500/30'
+                : 'bg-dark-900/60 border-dark-700 hover:border-amber-500/40 hover:bg-dark-900'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                <PhoneCall className="w-3.5 h-3.5" /> Needs Call &amp; Verify
+              </span>
+              {queueCounts.needs_call > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              )}
+            </div>
+            <p className="text-2xl font-display font-extrabold text-white">
+              {queueCounts.needs_call}
+            </p>
+            <p className="text-[10px] text-dark-400 mt-0.5">Profiles ready for phone schedule</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQueueFilter(queueFilter === 'scheduled_unpaid' ? 'all' : 'scheduled_unpaid')}
+            className={`p-3.5 rounded-2xl border text-left transition-all ${
+              queueFilter === 'scheduled_unpaid'
+                ? 'bg-blue-500/20 border-blue-400 ring-2 ring-blue-500/30'
+                : 'bg-dark-900/60 border-dark-700 hover:border-blue-500/40 hover:bg-dark-900'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-blue-300 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Awaiting Payment
+              </span>
+            </div>
+            <p className="text-2xl font-display font-extrabold text-white">
+              {queueCounts.scheduled_unpaid}
+            </p>
+            <p className="text-[10px] text-dark-400 mt-0.5">Scheduled &amp; unlocked for $70 fee</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQueueFilter(queueFilter === 'paid' ? 'all' : 'paid')}
+            className={`p-3.5 rounded-2xl border text-left transition-all ${
+              queueFilter === 'paid'
+                ? 'bg-emerald-500/20 border-emerald-400 ring-2 ring-emerald-500/30'
+                : 'bg-dark-900/60 border-dark-700 hover:border-emerald-500/40 hover:bg-dark-900'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Confirmed &amp; Paid
+              </span>
+            </div>
+            <p className="text-2xl font-display font-extrabold text-white">
+              {queueCounts.paid}
+            </p>
+            <p className="text-[10px] text-dark-400 mt-0.5">Active paid Founding Members</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQueueFilter(queueFilter === 'incomplete' ? 'all' : 'incomplete')}
+            className={`p-3.5 rounded-2xl border text-left transition-all ${
+              queueFilter === 'incomplete'
+                ? 'bg-dark-700 border-dark-500 ring-2 ring-dark-500/30'
+                : 'bg-dark-900/60 border-dark-700 hover:border-dark-500 hover:bg-dark-900'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-dark-300 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5" /> Incomplete
+              </span>
+            </div>
+            <p className="text-2xl font-display font-extrabold text-white">
+              {queueCounts.incomplete}
+            </p>
+            <p className="text-[10px] text-dark-400 mt-0.5">Missing dog, cert or address</p>
+          </button>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1 text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-dark-400 font-semibold mr-1">Queue Filter:</span>
+            {[
+              { key: 'all', label: `All Accounts (${queueCounts.all})` },
+              { key: 'needs_call', label: `Needs Call & Verify (${queueCounts.needs_call})` },
+              { key: 'scheduled_unpaid', label: `Awaiting Payment (${queueCounts.scheduled_unpaid})` },
+              { key: 'paid', label: `Confirmed & Paid (${queueCounts.paid})` },
+              { key: 'incomplete', label: `Incomplete (${queueCounts.incomplete})` },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setQueueFilter(tab.key as QueueFilter)}
+                className={`px-3 py-1 rounded-xl font-bold transition ${
+                  queueFilter === tab.key
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'bg-dark-900/80 text-dark-300 hover:text-white border border-dark-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {queueFilter !== 'all' && (
+            <button
+              onClick={() => setQueueFilter('all')}
+              className="text-xs text-brand-400 hover:underline font-semibold"
+            >
+              Reset Queue Filter
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -556,6 +831,25 @@ export default function AdminUsersPanel() {
                       )}
                     </div>
 
+                    {/* Scheduled Date / Time Slot Pill */}
+                    <div className="hidden xl:flex items-center gap-1.5 shrink-0">
+                      {user.assignedSessionDate ? (
+                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-brand-500/15 text-brand-300 border border-brand-500/30 flex items-center gap-1.5 shadow-sm">
+                          <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                          <span>{user.assignedSessionDate}</span>
+                          {user.hasPaid ? (
+                            <span className="ml-1 px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase">Paid $70</span>
+                          ) : (
+                            <span className="ml-1 px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase">Unpaid</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs text-dark-500 rounded-xl bg-dark-750 border border-dark-700">
+                          Not Scheduled
+                        </span>
+                      )}
+                    </div>
+
                     {/* Plan Badge */}
                     <div className="hidden sm:flex items-center gap-2 shrink-0">
                       {currentPlan ? (
@@ -575,6 +869,27 @@ export default function AdminUsersPanel() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 shrink-0 pl-2 border-l border-dark-700">
+                    {/* Review & Schedule Action Button */}
+                    {!user.accountVerified && user.profileCompleted ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
+                        title="Review Canine Profile, Call Customer & Grant Verification"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-md transition animate-pulse"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Review &amp; Schedule</span>
+                      </button>
+                    ) : user.accountVerified ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
+                        title={user.assignedSessionDate ? 'Edit Scheduled Session Date & Slot' : 'Set Scheduled Session Date'}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-dark-200 bg-dark-700/90 hover:bg-dark-600 hover:text-white border border-dark-600 rounded-xl transition"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                        <span className="hidden xl:inline">{user.assignedSessionDate ? 'Edit Date' : 'Schedule'}</span>
+                      </button>
+                    ) : null}
+
                     {/* View Profile Popup Button */}
                     <button
                       onClick={() => setViewingUser(enrichedItem)}
@@ -1070,7 +1385,40 @@ export default function AdminUsersPanel() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
                       <span className="text-dark-400">Booking &amp; Stripe Checkout Gate:</span>
                       <span className={`font-bold ${viewingUser.user.accountVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {viewingUser.user.accountVerified ? 'Unlocked (Customer can pick sessions and pay)' : 'Locked (Account verification required)'}
+                        {viewingUser.user.accountVerified ? 'Unlocked (Customer can pay Founding Member $70 CAD)' : 'Locked (Account verification required)'}
+                      </span>
+                    </div>
+
+                    {/* Assigned Session Info */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1 pt-1 border-t border-dark-800">
+                      <span className="text-dark-400">Agreed Session Date &amp; Slot:</span>
+                      <span className="font-bold text-white flex items-center gap-1.5">
+                        {viewingUser.user.assignedSessionDate ? (
+                          <>
+                            <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                            <span>{viewingUser.user.assignedSessionDate} · {viewingUser.user.assignedTimeSlot || 'Standard Slot'}</span>
+                            {viewingUser.user.callConfirmed && (
+                              <span className="text-emerald-400 text-[10px] font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded">Call Confirmed ✓</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-dark-500 italic">Not scheduled yet</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Payment Status */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                      <span className="text-dark-400">Founding Member Payment:</span>
+                      <span className="font-bold">
+                        {viewingUser.user.hasPaid ? (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Paid $70 CAD {viewingUser.user.paidAt ? `(${new Date(viewingUser.user.paidAt).toLocaleDateString()})` : ''}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400">Unpaid ($70 CAD pending)</span>
+                        )}
                       </span>
                     </div>
 
@@ -1088,6 +1436,14 @@ export default function AdminUsersPanel() {
                   <div className="mt-3 pt-3 border-t border-dark-700/70 flex flex-wrap items-center justify-between gap-3">
                     <span className="text-xs text-dark-300">Account Status Controls:</span>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenScheduleModal(viewingUser.user)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        {viewingUser.user.assignedSessionDate ? 'Edit Schedule & Clearance' : 'Schedule Session & Clear'}
+                      </button>
+
                       {viewingUser.user.accountVerified ? (
                         <button
                           onClick={() => handleVerifyAccount(viewingUser.user, false)}
@@ -1406,6 +1762,241 @@ export default function AdminUsersPanel() {
           );
         })()}
       </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* 📞 REVIEW, CALL & SCHEDULE SESSION MODAL                                  */}
+      {/* ========================================================================= */}
+      {schedulingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-dark-800 border border-dark-600 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-dark-600 flex items-center justify-between bg-dark-850">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-brand-500 p-0.5 shadow-lg shadow-amber-500/20 shrink-0">
+                  <div className="w-full h-full rounded-[14px] bg-dark-900 flex items-center justify-center">
+                    <PhoneCall className="w-5 h-5 text-amber-400" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-lg text-white flex items-center gap-2">
+                    Review Profile &amp; Schedule Session
+                  </h3>
+                  <p className="text-xs text-dark-300">
+                    Client: <span className="text-white font-bold">{schedulingUser.name}</span> · Dog: <span className="text-brand-300 font-bold">{schedulingUser.dog?.name || 'Athlete'}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSchedulingUser(null)}
+                className="text-dark-400 hover:text-white p-1 rounded-lg hover:bg-dark-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveScheduleAndVerify} className="p-5 flex-1 overflow-y-auto space-y-5 text-xs sm:text-sm">
+              {/* Top Step Banner */}
+              <div className="p-3.5 rounded-2xl bg-brand-500/10 border border-brand-500/25 flex items-start gap-3">
+                <Sparkles className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-dark-200 leading-relaxed">
+                  <span className="font-bold text-white">Flow Step:</span> Call the customer to agree upon their preferred session date. Once confirmed, specify the date and grant verification. This immediately unlocks the <span className="text-brand-300 font-bold">Founding Member ($70 CAD)</span> payment for their account.
+                </div>
+              </div>
+
+              {/* Step 1: Customer Phone Call Bar */}
+              <div className="p-4 rounded-2xl bg-dark-900 border border-dark-700 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                      1. Call Customer to Agree on Date
+                    </p>
+                    <p className="text-xs text-dark-400 mt-0.5">
+                      Phone: <span className="text-white font-mono font-bold">{schedulingUser.phone || 'No phone registered'}</span>
+                    </p>
+                  </div>
+
+                  {schedulingUser.phone ? (
+                    <a
+                      href={`tel:${schedulingUser.phone}`}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition"
+                    >
+                      <PhoneCall className="w-4 h-4" />
+                      Call {schedulingUser.phone}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-red-400 font-semibold">Missing phone number</span>
+                  )}
+                </div>
+
+                <label className="flex items-center gap-2.5 pt-2 border-t border-dark-800 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={callConfirmed}
+                    onChange={e => setCallConfirmed(e.target.checked)}
+                    className="w-4 h-4 rounded text-brand-500 focus:ring-brand-500 bg-dark-800 border-dark-600"
+                  />
+                  <span className="text-xs text-emerald-300 font-semibold">
+                    I spoke with {schedulingUser.name} on the phone and confirmed the session date &amp; time slot.
+                  </span>
+                </label>
+              </div>
+
+              {/* Step 2: Canine Records & Vaccine Check */}
+              <div className="p-4 rounded-2xl bg-dark-900 border border-dark-700 space-y-3">
+                <p className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Dog className="w-3.5 h-3.5 text-brand-400" />
+                  2. Canine Health &amp; Vaccine Review
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-dark-800 border border-dark-700/80">
+                    <p className="text-[10px] text-dark-400 uppercase font-bold">Dog Name</p>
+                    <p className="text-white font-bold mt-0.5">{schedulingUser.dog?.name || 'Unknown'}</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-dark-800 border border-dark-700/80">
+                    <p className="text-[10px] text-dark-400 uppercase font-bold">Breed</p>
+                    <p className="text-white font-semibold mt-0.5 truncate">{schedulingUser.dog?.breed || 'Unknown'}</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-dark-800 border border-dark-700/80">
+                    <p className="text-[10px] text-dark-400 uppercase font-bold">Weight &amp; Age</p>
+                    <p className="text-white font-semibold mt-0.5">{schedulingUser.dog?.weight || 0} lbs · {schedulingUser.dog?.age || 0} yrs</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-dark-800 border border-dark-700/80">
+                    <p className="text-[10px] text-dark-400 uppercase font-bold">Energy Level</p>
+                    <p className="text-brand-300 font-semibold mt-0.5">{schedulingUser.dog?.energyLevel || 'Moderate'}</p>
+                  </div>
+                </div>
+
+                {schedulingUser.dog?.reactivityNotes && (
+                  <div className="p-2.5 rounded-xl bg-dark-800/80 border border-dark-700 text-xs">
+                    <span className="text-dark-400 font-bold">Behavioral Notes:</span>{' '}
+                    <span className="text-dark-200">{schedulingUser.dog.reactivityNotes}</span>
+                  </div>
+                )}
+
+                {/* Vaccine Record Inspection */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-dark-800 border border-dark-700/80 flex-wrap gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <FileText className="w-4 h-4 text-brand-400" />
+                    <div>
+                      <p className="text-xs font-bold text-white">
+                        {schedulingUser.vaccines?.rabiesFileName || 'Vaccine Document'}
+                      </p>
+                      <p className="text-[11px] text-dark-400">
+                        Status: <span className="font-semibold text-white">{schedulingUser.vaccines?.status || 'Pending'}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {schedulingUser.vaccines?.documentUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setViewingCertUser(schedulingUser)}
+                        className="px-3 py-1.5 rounded-xl bg-brand-500/20 text-brand-300 hover:bg-brand-500/30 font-bold text-xs flex items-center gap-1.5 transition"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View Certificate
+                      </button>
+                    )}
+                    {schedulingUser.vaccines?.status !== 'approved' && (
+                      <span className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                        Will auto-approve on verify
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Session Date & Time Slot */}
+              <div className="p-4 rounded-2xl bg-dark-900 border border-dark-700 space-y-3">
+                <p className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                  3. Specify Agreed Session Date &amp; Pickup Window
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-dark-300 mb-1">
+                      Agreed Session Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={scheduledDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => setScheduledDate(e.target.value)}
+                      className="w-full h-11 bg-dark-800 border border-dark-600 rounded-xl px-3 text-white text-sm focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-dark-300 mb-1">
+                      Pickup Window / Time Slot *
+                    </label>
+                    <select
+                      value={scheduledTimeSlot}
+                      onChange={e => setScheduledTimeSlot(e.target.value)}
+                      className="w-full h-11 bg-dark-800 border border-dark-600 rounded-xl px-3 text-white text-sm focus:outline-none focus:border-brand-500"
+                    >
+                      {STANDARD_TIME_SLOTS.map(slot => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-dark-300 mb-1">
+                    Internal Concierge Notes (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={scheduleNotes}
+                    onChange={e => setScheduleNotes(e.target.value)}
+                    placeholder="e.g. Park on driveway, dog loves tennis ball warm-up, gate latch instructions..."
+                    className="w-full h-10 bg-dark-800 border border-dark-600 rounded-xl px-3 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="p-4 border-t border-dark-700 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setSchedulingUser(null)}
+                  className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold rounded-xl border border-dark-600 text-dark-300 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingSchedule || !scheduledDate}
+                  className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                >
+                  {savingSchedule ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving &amp; Granting Verification...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Confirm Call, Set Date &amp; Grant Verification</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* ✏️ ADD / EDIT USER ACCOUNT MODAL                                          */}

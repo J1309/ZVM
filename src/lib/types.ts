@@ -131,5 +131,14 @@ export interface User {
   accountVerified?: boolean;
   accountVerifiedAt?: string | null;
   accountVerifiedBy?: string | null;
+  assignedSessionDate?: string;
+  assignedTimeSlot?: string;
+  assignedNotes?: string;
+  callConfirmed?: boolean;
+  callConfirmedAt?: string | null;
+  assignedBy?: string | null;
+  hasPaid?: boolean;
+  paidAt?: string | null;
+  paidPlanName?: string | null;
   createdAt: string;
 }

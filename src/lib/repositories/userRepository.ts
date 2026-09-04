@@ -129,12 +129,38 @@ export async function submitProfile(): Promise<User> {
   return updateUser(id, { profileCompleted: true, profileSubmittedAt: new Date().toISOString() });
 }
 
-export async function verifyAccount(userId: string, verified: boolean): Promise<User | null> {
-  if (convex) return convex.mutation(api.users.verifyAccount, { userId: userId as any, verified });
+export async function verifyAccount(
+  userId: string,
+  verified: boolean,
+  sessionDetails?: {
+    assignedSessionDate?: string;
+    assignedTimeSlot?: string;
+    assignedNotes?: string;
+    callConfirmed?: boolean;
+  }
+): Promise<User | null> {
+  if (convex) {
+    return convex.mutation(api.users.verifyAccount, {
+      userId: userId as any,
+      verified,
+      assignedSessionDate: sessionDetails?.assignedSessionDate,
+      assignedTimeSlot: sessionDetails?.assignedTimeSlot,
+      assignedNotes: sessionDetails?.assignedNotes,
+      callConfirmed: sessionDetails?.callConfirmed,
+    });
+  }
   return updateUser(userId, {
     accountVerified: verified,
     accountVerifiedAt: verified ? new Date().toISOString() : null,
     accountVerifiedBy: verified ? 'Admin' : null,
+    ...(sessionDetails?.assignedSessionDate !== undefined && { assignedSessionDate: sessionDetails.assignedSessionDate }),
+    ...(sessionDetails?.assignedTimeSlot !== undefined && { assignedTimeSlot: sessionDetails.assignedTimeSlot }),
+    ...(sessionDetails?.assignedNotes !== undefined && { assignedNotes: sessionDetails.assignedNotes }),
+    ...(sessionDetails?.callConfirmed !== undefined && {
+      callConfirmed: sessionDetails.callConfirmed,
+      callConfirmedAt: sessionDetails.callConfirmed ? new Date().toISOString() : null,
+      assignedBy: 'Admin',
+    }),
   });
 }
 
@@ -153,4 +179,15 @@ export async function deleteUser(id: string): Promise<void> {
   const users = getItem<User[]>(KEY) ?? [];
   const filtered = users.filter(user => user.id !== id);
   setItem(KEY, filtered);
+}
+
+export async function recordPaymentSuccess(planName: string): Promise<User> {
+  if (convex) return convex.mutation(api.users.recordPaymentSuccess, { planName });
+  const id = sessionStorage.getItem('zoomievan_session');
+  if (!id) throw new Error('Not logged in');
+  return updateUser(id, {
+    hasPaid: true,
+    paidAt: new Date().toISOString(),
+    paidPlanName: planName,
+  });
 }

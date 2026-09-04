@@ -6,11 +6,11 @@ import {
   Loader2, CreditCard, Upload, FileText, CheckCircle2, Sparkles, Star, Clock,
   PhoneCall, AlertCircle, ExternalLink, Trash2, Calendar, Settings,
   Lock, RefreshCw, ChevronDown, Bell,
-  Edit2, ArrowRight, Camera
+  Edit2, Camera
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
-import { isPrivilegedAdminEmail } from '../lib/repositories/userRepository';
+import { isPrivilegedAdminEmail, recordPaymentSuccess } from '../lib/repositories/userRepository';
 import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 import { isFullLaunchActive, getTimeUntilLaunch, CountdownState, LAUNCH_TIME_LABEL_CANADIAN } from '../lib/launchConfig';
@@ -142,8 +142,12 @@ export default function UserDashboard() {
       setPickedSessions([]);
       setSessionsConfirmed(false);
       setCheckoutPlan(null);
+    } else if (checkoutStatus === 'success' && user && !user.hasPaid) {
+      recordPaymentSuccess('Founding Member Trial Run')
+        .then(() => refreshUser())
+        .catch(err => console.error('Failed to record payment success:', err));
     }
-  }, [checkoutStatus]);
+  }, [checkoutStatus, user]);
 
   const handleAgreementScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
@@ -580,6 +584,15 @@ export default function UserDashboard() {
     setCheckoutPlan(selectedPlan);
     setCheckoutError('');
     try {
+      if (!convex) {
+        // Local/demo fallback payment confirmation
+        await recordPaymentSuccess(foundingApplies ? 'Founding Member Trial Run' : 'Standard Slatmill Package');
+        await refreshUser();
+        setProfileSuccessMsg('🎉 Payment of $70 CAD confirmed! Your sessions are locked in.');
+        setTimeout(() => setProfileSuccessMsg(null), 6000);
+        setCheckoutPlan(null);
+        return;
+      }
       const sessionsToSend = foundingApplies ? [] : pickedSessions;
       const session = await createCheckoutSession(selectedPlan, sessionsToSend);
       window.location.assign(session.url);
@@ -1199,15 +1212,23 @@ export default function UserDashboard() {
                       </div>
 
                       {/* Pill Button (Matching Mockup button style) */}
-                      {isAccountVerified ? (
+                      {user.hasPaid ? (
                         <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm self-start sm:self-auto">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Verified &amp; Cleared</span>
+                          <span>Paid &amp; Confirmed</span>
                         </span>
+                      ) : isAccountVerified ? (
+                        <button
+                          onClick={() => setActiveTab('booking')}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-brand-500 text-white text-xs font-bold shadow-sm self-start sm:self-auto hover:opacity-95 transition animate-pulse"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Verified — Pay $70</span>
+                        </button>
                       ) : isProfileSubmitted ? (
                         <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-sm self-start sm:self-auto animate-pulse">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Under Review</span>
+                          <PhoneCall className="w-3.5 h-3.5" />
+                          <span>Call in Progress</span>
                         </span>
                       ) : (
                         <button
@@ -1422,58 +1443,148 @@ export default function UserDashboard() {
 
                         {/* Gated Booking & Payment Notice */}
                         <div className="mt-4 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-start gap-3">
-                          <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                          <div className="space-y-1">
-                            <p className="text-xs font-bold text-amber-200">
-                              Session Payment &amp; Scheduling Locked
-                            </p>
-                            <p className="text-[11px] text-amber-300/80 leading-relaxed">
-                              You cannot pay or finalize sessions until your profile is created and verified by our safety team. Once submitted and cleared by an admin, Stripe checkout unlocks automatically.
-                            </p>
-                          </div>
+                          {isProfileSubmitted ? (
+                            <>
+                              <PhoneCall className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-amber-200">
+                                  Profile Submitted — ZoomieVan Owner Will Call You
+                                </p>
+                                <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                                  Our safety team is reviewing {user.dog?.name || 'your dog'}'s canine records. The owner will call you directly at <span className="font-bold text-white font-mono">{user.phone || 'your phone number'}</span> to coordinate your session date. Once agreed on the call, your account will be cleared and the Founding Member payment ($70 CAD) will unlock!
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-amber-200">
+                                  Session Payment &amp; Scheduling Locked
+                                </p>
+                                <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                                  Complete all 5 mandatory steps above and submit your profile for review. Once verified by our safety team and confirmed via phone call, Founding Member payment will unlock.
+                                </p>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
-                      /* STATE B: VERIFIED ACCOUNT (ACTIVE FITNESS RECORDS) */
-                      <div className="space-y-3.5">
-                        {/* Package Item */}
-                        <div className="flex items-center justify-between gap-3 py-1.5">
-                          <div className="flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20 shrink-0" />
-                            <div>
-                              <p className="text-xs sm:text-sm font-semibold text-white">
-                                Mobile slatmill package
-                              </p>
-                              <p className="text-[11px] text-white/50">
-                                {foundingApplies ? 'Founding Member Trial Run (3 Runs for $70)' : currentPlan.name}
+                      /* STATE B: VERIFIED ACCOUNT (SCHEDULED OR PAID) */
+                      <div className="space-y-4">
+                        {user.hasPaid ? (
+                          /* Sub-state B2: PAID & CONFIRMED */
+                          <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-600/15 to-emerald-500/20 border-2 border-emerald-500/40 shadow-xl space-y-3">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="text-xs font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                Founding Member Session Confirmed &amp; Locked!
+                              </span>
+                              <span className="px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
+                                Paid &amp; Confirmed ✓
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                              <div className="p-3 rounded-xl bg-dark-900/70 border border-emerald-500/20">
+                                <p className="text-[10px] text-white/50 uppercase font-bold">Confirmed 1st Session</p>
+                                <p className="text-white font-extrabold text-sm mt-0.5 flex items-center gap-1.5">
+                                  <Calendar className="w-4 h-4 text-brand-400" />
+                                  {user.assignedSessionDate || 'Scheduled'}
+                                </p>
+                                <p className="text-[11px] text-emerald-300 font-semibold mt-1">
+                                  Window: {user.assignedTimeSlot || 'Standard Slot'}
+                                </p>
+                              </div>
+
+                              <div className="p-3 rounded-xl bg-dark-900/70 border border-emerald-500/20">
+                                <p className="text-[10px] text-white/50 uppercase font-bold">Package Runs Remaining</p>
+                                <p className="text-white font-extrabold text-sm mt-0.5 flex items-center gap-1.5">
+                                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                  3 Runs Total (2 Bonus Runs Active)
+                                </p>
+                                <p className="text-[11px] text-white/60 mt-1">
+                                  Run 1 locked · 2 additional runs can be scheduled anytime
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-[#071A3D]/80 border border-white/10 text-xs flex items-center gap-2.5">
+                              <Sparkles className="w-4 h-4 text-brand-400 shrink-0" />
+                              <p className="text-white/80">
+                                Mobile dog gym van will arrive at <span className="text-white font-bold">{user.address.line1}, {user.address.city}</span>. We will send an SMS alert 15 minutes before arrival.
                               </p>
                             </div>
                           </div>
+                        ) : (
+                          /* Sub-state B1: VERIFIED & SCHEDULED VIA PHONE, AWAITING PAYMENT */
+                          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-brand-500/15 to-emerald-500/15 border-2 border-emerald-500/40 shadow-xl space-y-3">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5 uppercase tracking-wider">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Account Verified &amp; Scheduled via Call
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold">
+                                Call Confirmed ✓
+                              </span>
+                            </div>
 
-                          <button
-                            onClick={() => setActiveTab('booking')}
-                            className="px-4 py-1.5 rounded-full bg-[#FF6B00] hover:bg-orange-600 text-white text-xs font-bold shadow-sm transition"
-                          >
-                            Book &amp; Pay
-                          </button>
-                        </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                              <div className="p-2.5 rounded-xl bg-dark-900/70 border border-white/10">
+                                <p className="text-[10px] text-white/50 uppercase font-bold">Agreed 1st Session Date</p>
+                                <p className="text-white font-extrabold text-sm mt-0.5 flex items-center gap-1.5">
+                                  <Calendar className="w-4 h-4 text-brand-400" />
+                                  {user.assignedSessionDate || 'To be scheduled'}
+                                </p>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-dark-900/70 border border-white/10">
+                                <p className="text-[10px] text-white/50 uppercase font-bold">Pickup Time Window</p>
+                                <p className="text-white font-extrabold text-sm mt-0.5 flex items-center gap-1.5">
+                                  <Clock className="w-4 h-4 text-amber-400" />
+                                  {user.assignedTimeSlot || 'Morning Window'}
+                                </p>
+                              </div>
+                            </div>
 
-                        {/* Scheduling Call Item */}
+                            <p className="text-[11px] text-white/80 leading-relaxed">
+                              Your appointment date was confirmed with the ZoomieVan owner. Pay your Founding Member fee below to finalize your session!
+                            </p>
+
+                            <button
+                              onClick={startCheckout}
+                              disabled={checkoutPlan !== null}
+                              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] hover:scale-[1.01] active:scale-[0.99] text-white font-black text-xs sm:text-sm shadow-xl shadow-orange-500/30 flex items-center justify-center gap-2 transition"
+                            >
+                              {checkoutPlan ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Processing Checkout...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CreditCard className="w-4 h-4" />
+                                  <span>Pay $70 CAD for Founding Members (3 Runs Total)</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Doorstep Location */}
                         <div className="flex items-center justify-between gap-3 py-1.5 border-t border-white/10">
                           <div className="flex items-center gap-3">
                             <span className="w-3 h-3 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20 shrink-0" />
                             <div>
                               <p className="text-xs sm:text-sm font-semibold text-white">
-                                Personal concierge scheduling
+                                Doorstep service address
                               </p>
                               <p className="text-[11px] text-white/50">
-                                Owner will call {user.phone} to coordinate appointments
+                                {user.address.line1}, {user.address.city}
                               </p>
                             </div>
                           </div>
-
-                          <span className="px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                            Call Ready
+                          <span className="px-4 py-1.5 rounded-full bg-[#071A3D] text-white text-xs font-bold border border-white/10 shadow-sm">
+                            Active Route
                           </span>
                         </div>
 
@@ -1490,51 +1601,9 @@ export default function UserDashboard() {
                               </p>
                             </div>
                           </div>
-
                           <span className="px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
                             Approved ✓
                           </span>
-                        </div>
-
-                        {/* Doorstep Location */}
-                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-white/10">
-                          <div className="flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20 shrink-0" />
-                            <div>
-                              <p className="text-xs sm:text-sm font-semibold text-white">
-                                Doorstep service address
-                              </p>
-                              <p className="text-[11px] text-white/50">
-                                {user.address.line1}, {user.address.city}
-                              </p>
-                            </div>
-                          </div>
-
-                          <span className="px-4 py-1.5 rounded-full bg-[#071A3D] text-white text-xs font-bold border border-white/10 shadow-sm">
-                            Active Route
-                          </span>
-                        </div>
-
-                        {/* Unlocked Booking Banner */}
-                        <div className="mt-4 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
-                            <div>
-                              <p className="text-xs font-bold text-emerald-200">
-                                Account Cleared for Active Booking!
-                              </p>
-                              <p className="text-[11px] text-emerald-300/80">
-                                You have full access to pick dates and pay securely via Stripe.
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => setActiveTab('booking')}
-                            className="px-4 py-2 rounded-full bg-[#FF6B00] hover:bg-orange-600 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 shrink-0"
-                          >
-                            <span>Book Now</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </div>
                     )}
@@ -1567,7 +1636,54 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Gated Alert Message if Not Verified */}
-                {!isAccountVerified && (
+                {/* Already Paid & Confirmed Banner */}
+                {user.hasPaid ? (
+                  <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-500/20 via-brand-500/15 to-emerald-500/20 border-2 border-emerald-500/40 text-white shadow-xl space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-sm font-extrabold text-emerald-300 flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        Your Founding Member Package is Active &amp; Paid!
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold">
+                        $70 CAD Paid ✓
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 bg-dark-900/60 rounded-xl border border-white/10">
+                        <p className="text-[10px] text-white/50 uppercase font-bold">1st Workout Session</p>
+                        <p className="text-white font-extrabold text-sm mt-0.5 flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4 text-brand-400" />
+                          {user.assignedSessionDate || 'Scheduled'} · {user.assignedTimeSlot || 'Standard Window'}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-dark-900/60 rounded-xl border border-white/10">
+                        <p className="text-[10px] text-white/50 uppercase font-bold">Remaining Sessions</p>
+                        <p className="text-white font-extrabold text-sm mt-0.5 flex items-center gap-1.5">
+                          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                          2 Bonus Runs in Founding Package
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/80">
+                      Doorstep delivery to: <span className="font-bold text-white">{user.address.line1}, {user.address.city}</span>. Text alerts will be sent 15 minutes prior to arrival.
+                    </p>
+                  </div>
+                ) : isAccountVerified && user.assignedSessionDate ? (
+                  <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/20 via-brand-500/20 to-emerald-500/20 border border-emerald-400/40 text-white shadow-xl space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-bold text-sm text-emerald-300 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-brand-400" />
+                        Agreed Session: {user.assignedSessionDate} ({user.assignedTimeSlot})
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+                        Phone Confirmed ✓
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/80">
+                      Your workout date has been locked in by phone with the owner. Complete the Founding Member payment ($70 CAD) below to secure this slot on the mobile van route.
+                    </p>
+                  </div>
+                ) : !isAccountVerified ? (
                   <div className="p-5 rounded-3xl bg-amber-500/15 border border-amber-500/30 text-white space-y-2">
                     <div className="flex items-center gap-2.5 font-bold text-sm text-amber-300">
                       <Lock className="w-5 h-5 text-amber-400 shrink-0" />
@@ -1583,7 +1699,7 @@ export default function UserDashboard() {
                       Complete Profile Now
                     </button>
                   </div>
-                )}
+                ) : null}
 
                 {/* Launch Countdown Banner */}
                 {!fullLaunchActive ? (

@@ -110,6 +110,15 @@ function userFromDoc(doc: any) {
     accountVerified: doc.accountVerified ?? false,
     accountVerifiedAt: doc.accountVerifiedAt ? new Date(doc.accountVerifiedAt).toISOString() : null,
     accountVerifiedBy: doc.accountVerifiedBy ?? null,
+    assignedSessionDate: doc.assignedSessionDate,
+    assignedTimeSlot: doc.assignedTimeSlot,
+    assignedNotes: doc.assignedNotes,
+    callConfirmed: doc.callConfirmed ?? false,
+    callConfirmedAt: doc.callConfirmedAt ? new Date(doc.callConfirmedAt).toISOString() : null,
+    assignedBy: doc.assignedBy ?? null,
+    hasPaid: doc.hasPaid ?? false,
+    paidAt: doc.paidAt ? new Date(doc.paidAt).toISOString() : null,
+    paidPlanName: doc.paidPlanName ?? null,
     createdAt: new Date(doc.createdAt).toISOString(),
   };
 }
@@ -332,6 +341,10 @@ export const verifyAccount = mutation({
   args: {
     userId: v.id("users"),
     verified: v.boolean(),
+    assignedSessionDate: v.optional(v.string()),
+    assignedTimeSlot: v.optional(v.string()),
+    assignedNotes: v.optional(v.string()),
+    callConfirmed: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
@@ -340,6 +353,14 @@ export const verifyAccount = mutation({
       accountVerified: args.verified,
       accountVerifiedAt: args.verified ? now : null,
       accountVerifiedBy: args.verified ? (admin.name || "Admin") : null,
+      ...(args.assignedSessionDate !== undefined && { assignedSessionDate: args.assignedSessionDate }),
+      ...(args.assignedTimeSlot !== undefined && { assignedTimeSlot: args.assignedTimeSlot }),
+      ...(args.assignedNotes !== undefined && { assignedNotes: args.assignedNotes }),
+      ...(args.callConfirmed !== undefined && {
+        callConfirmed: args.callConfirmed,
+        callConfirmedAt: args.callConfirmed ? now : null,
+        assignedBy: admin.name || "Admin",
+      }),
       updatedAt: now,
     });
     const targetUser = await ctx.db.get(args.userId);
@@ -348,7 +369,7 @@ export const verifyAccount = mutation({
       action: args.verified ? "account.verified" : "account.unverified",
       entityType: "user",
       entityId: args.userId,
-      metadata: { targetUserName: targetUser?.name },
+      metadata: { targetUserName: targetUser?.name, sessionDate: args.assignedSessionDate, timeSlot: args.assignedTimeSlot },
       createdAt: now,
     });
     return targetUser ? userFromDoc(targetUser) : null;
@@ -443,5 +464,46 @@ export const setAdminRoleByEmail = mutation({
     await ctx.db.patch(user._id, { role: "admin", updatedAt: Date.now() });
     const refreshed = await ctx.db.get(user._id);
     return refreshed ? userFromDoc(refreshed) : null;
+  },
+});
+
+export const recordPaymentSuccess = mutation({
+  args: {
+    planName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const now = Date.now();
+    await ctx.db.patch(user._id, {
+      hasPaid: true,
+      paidAt: now,
+      paidPlanName: args.planName,
+      updatedAt: now,
+    });
+    if (user.assignedSessionDate && user.assignedTimeSlot) {
+      await ctx.db.insert("bookings", {
+        userId: user._id,
+        fsa: (user.address?.postalCode || "").slice(0, 3).toUpperCase(),
+        customerName: user.name,
+        dogName: user.dog?.name || "Dog",
+        date: user.assignedSessionDate,
+        timeSlot: user.assignedTimeSlot,
+        planName: args.planName,
+        sessionFee: 35,
+        surcharge: 0,
+        status: "scheduled",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await ctx.db.insert("auditEvents", {
+      actorUserId: user._id,
+      action: "payment.completed",
+      entityType: "user",
+      entityId: user._id,
+      metadata: { planName: args.planName, sessionDate: user.assignedSessionDate },
+      createdAt: now,
+    });
+    return userFromDoc(await ctx.db.get(user._id));
   },
 });
