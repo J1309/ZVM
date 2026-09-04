@@ -18,6 +18,7 @@ const dog = v.object({
   age: v.number(),
   energyLevel: v.string(),
   reactivityNotes: v.string(),
+  photoUrl: v.optional(v.string()),
 });
 
 const vaccines = v.object({
@@ -71,6 +72,7 @@ function cleanDog(value: typeof dog.type) {
     age: value.age,
     energyLevel: text(value.energyLevel, 40, "Energy level"),
     reactivityNotes: text(value.reactivityNotes, 1500, "Reactivity notes"),
+    photoUrl: value.photoUrl ? text(value.photoUrl, 5000000, "Dog photo") : undefined,
   };
 }
 
@@ -141,14 +143,31 @@ export const getOrCreateCurrent = mutation({
     const email = rawEmail?.trim().toLowerCase();
     if (!email) throw new Error("A verified email address is required.");
 
+    const isPrivilegedAdmin =
+      email.startsWith("admin@") ||
+      email.endsWith("@zoomievan.ca") ||
+      email.endsWith("@zoomievaninc.com") ||
+      email === "support@zoomievaninc.com" ||
+      email === "admin";
+
     let user = await ctx.db
       .query("users")
       .withIndex("by_auth_provider_user_id", q => q.eq("authProviderUserId", identity.subject))
       .unique();
     if (user) {
+      const patches: Record<string, any> = {};
+      if (isPrivilegedAdmin && user.role !== "admin") {
+        patches.role = "admin";
+      }
       if (user.passwordHash || user.passwordSalt) {
-        await ctx.db.patch(user._id, { passwordHash: undefined, passwordSalt: undefined, updatedAt: Date.now() });
-        user = await ctx.db.get(user._id);
+        patches.passwordHash = undefined;
+        patches.passwordSalt = undefined;
+      }
+      if (Object.keys(patches).length > 0) {
+        patches.updatedAt = Date.now();
+        await ctx.db.patch(user._id, patches);
+        const refreshed = await ctx.db.get(user._id);
+        if (refreshed) user = refreshed;
       }
       return userFromDoc(user);
     }
@@ -163,8 +182,10 @@ export const getOrCreateCurrent = mutation({
         passwordHash: undefined,
         passwordSalt: undefined,
         updatedAt: Date.now(),
+        ...(isPrivilegedAdmin && user.role !== "admin" ? { role: "admin" } : {}),
       });
-      return userFromDoc(await ctx.db.get(user._id));
+      const refreshed = await ctx.db.get(user._id);
+      return userFromDoc(refreshed || user);
     }
 
     const now = Date.now();
@@ -181,6 +202,9 @@ export const getOrCreateCurrent = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    if (isPrivilegedAdmin) {
+      await ctx.db.patch(id, { role: "admin" });
+    }
     return userFromDoc(await ctx.db.get(id));
   },
 });

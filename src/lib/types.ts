@@ -84,6 +84,7 @@ export interface UserDog {
   age: number;
   energyLevel: string;
   reactivityNotes: string;
+  photoUrl?: string;
 }
 
 export interface UserVaccines {

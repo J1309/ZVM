@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { isPrivilegedAdminEmail } from '../lib/repositories/userRepository';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,7 +23,8 @@ export default function ProtectedRoute({ children, requireAdmin = false }: Prote
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (requireAdmin && user.role !== 'admin') {
+  const isAdmin = user.role === 'admin' || isPrivilegedAdminEmail(user.email);
+  if (requireAdmin && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 

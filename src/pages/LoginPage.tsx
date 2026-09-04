@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, ShieldCheck, Heart } from 'lucide-react';
 import { SignIn } from '@clerk/react';
 import { useAuth } from '../lib/auth';
+import { isPrivilegedAdminEmail } from '../lib/repositories/userRepository';
 
 export default function LoginPage() {
   if (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
@@ -72,8 +73,8 @@ export default function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  // Already signed in: no reason to show the sign-in form.
-  if (user) return <Navigate to="/dashboard" replace />;
+  // Already signed in: redirect to appropriate portal
+  if (user) return <Navigate to={user.role === 'admin' || isPrivilegedAdminEmail(user.email) ? '/admin' : '/dashboard'} replace />;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -87,7 +88,8 @@ export default function LoginPage() {
     const result = await login(email, password);
     setLoading(false);
     if (result.success) {
-      navigate('/dashboard');
+      const isAdmin = isPrivilegedAdminEmail(email);
+      navigate(isAdmin ? '/admin' : '/dashboard');
     } else {
       setError(result.error ?? 'Login failed.');
     }

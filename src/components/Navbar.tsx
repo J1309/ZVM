@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { isPrivilegedAdminEmail } from '../lib/repositories/userRepository';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 
 const navLinks = [
@@ -50,6 +51,7 @@ export default function Navbar() {
     return () => { active = false; };
   }, []);
   const { user, logout } = useAuth();
+  const isAdmin = !!user && (user.role === 'admin' || isPrivilegedAdminEmail(user?.email));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -163,7 +165,7 @@ export default function Navbar() {
                   </a>
                 )
               ))}
-              {user?.role === 'admin' && (
+              {isAdmin && (
                 <button
                   onClick={() => navigate('/admin')}
                   className="group relative flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-[#17345f] transition-colors hover:text-[#071A3D] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
@@ -179,11 +181,20 @@ export default function Navbar() {
               {user ? (
                 <>
                   <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate(isAdmin ? '/admin' : '/dashboard')}
                     className="flex items-center gap-2 rounded-full border border-[#D6E6FF] bg-[#F7FBFF] px-4 py-2 text-sm font-bold text-[#17345f] transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-[#071A3D] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   >
-                    <LayoutDashboard className="h-4 w-4 text-[#0F3D91]" />
-                    Dashboard
+                    {isAdmin ? (
+                      <>
+                        <Settings className="h-4 w-4 text-brand-500" />
+                        Admin Panel
+                      </>
+                    ) : (
+                      <>
+                        <LayoutDashboard className="h-4 w-4 text-[#0F3D91]" />
+                        Dashboard
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={handleLogout}
@@ -308,14 +319,14 @@ export default function Navbar() {
                 </div>
 
                 <div className="mt-3 border-t border-[#D6E6FF] pt-3">
-                  {user?.role === 'admin' && (
+                  {isAdmin && (
                     <button
                       onClick={() => handlePageNavigate('/admin')}
                       className="mb-1 flex min-h-12 w-full items-center justify-between rounded-2xl px-4 text-left text-base font-bold text-[#17345f] transition hover:bg-[#EAF2FF]"
                     >
                       <span className="flex items-center gap-2">
                         <Settings className="h-4 w-4 text-brand-500" />
-                        Admin
+                        Admin Panel
                       </span>
                       <ChevronRight className="h-4 w-4 text-brand-500" />
                     </button>
@@ -323,16 +334,18 @@ export default function Navbar() {
 
                   {user ? (
                     <>
-                      <button
-                        onClick={() => handlePageNavigate('/dashboard')}
-                        className="flex min-h-12 w-full items-center justify-between rounded-2xl px-4 text-left text-base font-bold text-[#17345f] transition hover:bg-[#EAF2FF]"
-                      >
-                        <span className="flex items-center gap-2">
-                          <LayoutDashboard className="h-4 w-4 text-[#0F3D91]" />
-                          Dashboard
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-brand-500" />
-                      </button>
+                      {!isAdmin && (
+                        <button
+                          onClick={() => handlePageNavigate('/dashboard')}
+                          className="flex min-h-12 w-full items-center justify-between rounded-2xl px-4 text-left text-base font-bold text-[#17345f] transition hover:bg-[#EAF2FF]"
+                        >
+                          <span className="flex items-center gap-2">
+                            <LayoutDashboard className="h-4 w-4 text-[#0F3D91]" />
+                            Dashboard
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-brand-500" />
+                        </button>
+                      )}
                       <button
                         onClick={handleLogout}
                         className="mt-1 min-h-12 w-full rounded-2xl px-4 text-left text-base font-bold text-[#5b7299] transition hover:bg-[#FFF7ED] hover:text-brand-600"

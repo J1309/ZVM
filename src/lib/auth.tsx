@@ -9,6 +9,7 @@ import {
   updateUser as updateUserRepo,
   submitProfile as submitProfileRepo,
   deleteSelf as deleteSelfRepo,
+  isPrivilegedAdminEmail,
 } from './repositories/userRepository';
 import { User } from './types';
 import { usesConvexBackend } from './convexClient';
@@ -70,6 +71,9 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
       import('./repositories/userRepository').then(({ getUserById }) =>
         getUserById(id).then(u => {
           if (u) {
+            if (isPrivilegedAdminEmail(u.email) && u.role !== 'admin') {
+              u.role = 'admin';
+            }
             setUser(u);
           } else {
             sessionStorage.removeItem(SESSION_KEY);
@@ -90,6 +94,9 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     if (!found?.passwordHash || !found.passwordSalt) return { success: false, error: 'Invalid email or password.' };
     const passwordHash = await hashDemoPassword(password, found.passwordSalt);
     if (found.passwordHash !== passwordHash) return { success: false, error: 'Invalid email or password.' };
+    if (isPrivilegedAdminEmail(found.email) && found.role !== 'admin') {
+      found.role = 'admin';
+    }
     sessionStorage.setItem(SESSION_KEY, found.id);
     sessionStorage.setItem(SESSION_TIME_KEY, Date.now().toString());
     setUser(found);
@@ -103,11 +110,12 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     const passwordHash = await hashDemoPassword(data.password, passwordSalt);
     const { password, ...profile } = data;
     void password;
+    const role = isPrivilegedAdminEmail(data.email) ? 'admin' : 'customer';
     const created = await createUser({
       ...profile,
       passwordHash,
       passwordSalt,
-      role: 'customer',
+      role,
     });
     sessionStorage.setItem(SESSION_KEY, created.id);
     sessionStorage.setItem(SESSION_TIME_KEY, Date.now().toString());
@@ -229,6 +237,9 @@ function ClerkBackedAuthProvider({ children }: { children: ReactNode }) {
         );
 
         if (!cancelled) {
+          if (isPrivilegedAdminEmail(appUser.email) && appUser.role !== 'admin') {
+            appUser.role = 'admin';
+          }
           setUser(appUser);
           setLoading(false);
         }

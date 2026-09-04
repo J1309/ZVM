@@ -20,6 +20,7 @@ const dogProfile = v.object({
   age: v.number(),
   energyLevel: v.string(),
   reactivityNotes: v.string(),
+  photoUrl: v.optional(v.string()),
 });
 
 const vaccineProfile = v.object({

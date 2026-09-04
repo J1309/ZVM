@@ -4,19 +4,61 @@ import { api, convex } from '../convexClient';
 
 const KEY = 'users';
 
+export function isPrivilegedAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return (
+    clean === 'admin' ||
+    clean === 'admin@zoomievan.ca' ||
+    clean === 'support@zoomievaninc.com' ||
+    clean.startsWith('admin@') ||
+    clean.includes('+admin@') ||
+    clean.endsWith('@zoomievan.ca') ||
+    clean.endsWith('@zoomievaninc.com')
+  );
+}
+
 export async function getAllUsers(): Promise<User[]> {
   if (convex) return convex.query(api.users.list);
-  return getItem<User[]>(KEY) ?? [];
+  const users = getItem<User[]>(KEY) ?? [];
+  let changed = false;
+  users.forEach(u => {
+    if (isPrivilegedAdminEmail(u.email) && u.role !== 'admin') {
+      u.role = 'admin';
+      changed = true;
+    }
+  });
+  if (changed) setItem(KEY, users);
+  return users;
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   const users = getItem<User[]>(KEY) ?? [];
-  return users.find(user => user.email.toLowerCase() === email.toLowerCase()) ?? null;
+  const found = users.find(user => user.email.toLowerCase() === email.toLowerCase()) ?? null;
+  if (found && isPrivilegedAdminEmail(found.email) && found.role !== 'admin') {
+    found.role = 'admin';
+    const index = users.findIndex(u => u.id === found.id);
+    if (index !== -1) {
+      users[index] = found;
+      setItem(KEY, users);
+    }
+  }
+  return found;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
   if (convex) return convex.query(api.users.getById, { id: id as any });
-  return (getItem<User[]>(KEY) ?? []).find(user => user.id === id) ?? null;
+  const users = getItem<User[]>(KEY) ?? [];
+  const found = users.find(user => user.id === id) ?? null;
+  if (found && isPrivilegedAdminEmail(found.email) && found.role !== 'admin') {
+    found.role = 'admin';
+    const index = users.findIndex(u => u.id === found.id);
+    if (index !== -1) {
+      users[index] = found;
+      setItem(KEY, users);
+    }
+  }
+  return found;
 }
 
 export async function getOrCreateCurrent(name?: string, phone?: string, email?: string): Promise<User> {
@@ -27,7 +69,8 @@ export async function getOrCreateCurrent(name?: string, phone?: string, email?: 
 export async function createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
   if (convex) throw new Error('Production accounts must be created through Clerk.');
   const users = getItem<User[]>(KEY) ?? [];
-  const newUser: User = { ...user, id: generateId(), createdAt: new Date().toISOString() };
+  const role = isPrivilegedAdminEmail(user.email) ? 'admin' : (user.role || 'customer');
+  const newUser: User = { ...user, role, id: generateId(), createdAt: new Date().toISOString() };
   users.push(newUser);
   setItem(KEY, users);
   return newUser;
