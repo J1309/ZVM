@@ -1,6 +1,11 @@
 import { getItem, setItem, generateId } from '../db';
 import { User } from '../types';
 import { api, convex } from '../convexClient';
+import {
+  sendWelcomeEmailClient,
+  sendVerificationEmailClient,
+  sendOrderConfirmationEmailClient,
+} from '../emailService';
 
 const KEY = 'users';
 
@@ -67,6 +72,9 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<
   const newUser: User = { ...user, role, id: generateId(), createdAt: new Date().toISOString() };
   users.push(newUser);
   setItem(KEY, users);
+  if (newUser.email) {
+    sendWelcomeEmailClient(newUser.email, newUser.name || 'Dog Parent').catch(() => {});
+  }
   return newUser;
 }
 
@@ -149,7 +157,7 @@ export async function verifyAccount(
       callConfirmed: sessionDetails?.callConfirmed,
     });
   }
-  return updateUser(userId, {
+  const updated = await updateUser(userId, {
     accountVerified: verified,
     accountVerifiedAt: verified ? new Date().toISOString() : null,
     accountVerifiedBy: verified ? 'Admin' : null,
@@ -162,6 +170,18 @@ export async function verifyAccount(
       assignedBy: 'Admin',
     }),
   });
+
+  if (verified && updated.email) {
+    sendVerificationEmailClient(
+      updated.email,
+      updated.name || 'Dog Parent',
+      updated.dog?.name || 'Your Dog',
+      updated.assignedSessionDate,
+      updated.assignedTimeSlot
+    ).catch(() => {});
+  }
+
+  return updated;
 }
 
 export async function deleteSelf(): Promise<{ success: boolean }> {
@@ -185,9 +205,27 @@ export async function recordPaymentSuccess(planName: string): Promise<User> {
   if (convex) return convex.mutation(api.users.recordPaymentSuccess, { planName });
   const id = sessionStorage.getItem('zoomievan_session');
   if (!id) throw new Error('Not logged in');
-  return updateUser(id, {
+  const updated = await updateUser(id, {
     hasPaid: true,
     paidAt: new Date().toISOString(),
     paidPlanName: planName,
   });
+
+  if (updated.email) {
+    const fullAddress = updated.address?.line1
+      ? `${updated.address.line1}, ${updated.address.city || ''} ${updated.address.province || ''} ${updated.address.postalCode || ''}`.trim()
+      : undefined;
+    sendOrderConfirmationEmailClient(
+      updated.email,
+      updated.name || 'Dog Parent',
+      updated.dog?.name || 'Your Dog',
+      planName,
+      '$70.00 CAD',
+      updated.assignedSessionDate,
+      updated.assignedTimeSlot,
+      fullAddress
+    ).catch(() => {});
+  }
+
+  return updated;
 }

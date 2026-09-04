@@ -228,6 +228,31 @@ export const markCheckoutSession = internalMutation({
         }
       }
     }
+
+    // Send Order & Booking Confirmation email on successful checkout
+    if (args.status === "paid" && payment.customerEmail) {
+      try {
+        const user = payment.userId ? await ctx.db.get(payment.userId) : null;
+        const amountDisplay = `$${(payment.amountCents / 100).toFixed(2)} ${(payment.currency || "CAD").toUpperCase()}`;
+        const firstSession = payment.sessions?.[0];
+        const fullAddress = user?.address?.line1
+          ? `${user.address.line1}, ${user.address.city || ""} ${user.address.province || ""} ${user.address.postalCode || ""}`.trim()
+          : undefined;
+
+        await ctx.scheduler.runAfter(0, internal.emails.sendOrderConfirmationEmail, {
+          to: payment.customerEmail,
+          userName: user?.name || "Valued Member",
+          dogName: user?.dog?.name || "Your Dog",
+          planName: payment.planName,
+          amountPaid: amountDisplay,
+          sessionDate: firstSession?.date || user?.assignedSessionDate || undefined,
+          timeSlot: firstSession?.timeSlot || user?.assignedTimeSlot || undefined,
+          address: fullAddress,
+        });
+      } catch (schedErr) {
+        console.error("[Email Scheduler] Failed to schedule checkout order confirmation email:", schedErr);
+      }
+    }
   },
 });
 

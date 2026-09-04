@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { requireAdmin, requireIdentity, requireSelfOrAdmin, requireUser } from "./auth";
 
 const LEGAL_VERSION = "2026-07-14";
@@ -193,11 +194,12 @@ export const getOrCreateCurrent = mutation({
     }
 
     const now = Date.now();
+    const resolvedName = text(args.name || identity.name || email.split("@")[0], 120, "Name");
     const id = await ctx.db.insert("users", {
       authProviderUserId: identity.subject,
       email,
       role: "customer",
-      name: text(args.name || identity.name || email.split("@")[0], 120, "Name"),
+      name: resolvedName,
       phone: text(args.phone || "", 40, "Phone"),
       address: { line1: "", city: "", province: "", postalCode: "" },
       dog: { name: "", breed: "", weight: 0, age: 0, energyLevel: "", reactivityNotes: "" },
@@ -209,6 +211,17 @@ export const getOrCreateCurrent = mutation({
     if (isPrivilegedAdmin) {
       await ctx.db.patch(id, { role: "admin" });
     }
+
+    // Mail 1: Friendly welcome & profile completion email on new user registration
+    try {
+      await ctx.scheduler.runAfter(0, internal.emails.sendWelcomeEmail, {
+        to: email,
+        userName: resolvedName,
+      });
+    } catch (schedErr) {
+      console.error("[Email Scheduler] Failed to schedule welcome email:", schedErr);
+    }
+
     return userFromDoc(await ctx.db.get(id));
   },
 });
@@ -372,6 +385,22 @@ export const verifyAccount = mutation({
       metadata: { targetUserName: targetUser?.name, sessionDate: args.assignedSessionDate, timeSlot: args.assignedTimeSlot },
       createdAt: now,
     });
+
+    // Mail 2: Sent when admin verifies profile and requests payment
+    if (args.verified && targetUser?.email) {
+      try {
+        await ctx.scheduler.runAfter(0, internal.emails.sendVerificationEmail, {
+          to: targetUser.email,
+          userName: targetUser.name || "Dog Parent",
+          dogName: targetUser.dog?.name || "Your Dog",
+          sessionDate: args.assignedSessionDate || targetUser.assignedSessionDate || undefined,
+          timeSlot: args.assignedTimeSlot || targetUser.assignedTimeSlot || undefined,
+        });
+      } catch (schedErr) {
+        console.error("[Email Scheduler] Failed to schedule verification email:", schedErr);
+      }
+    }
+
     return targetUser ? userFromDoc(targetUser) : null;
   },
 });
@@ -504,6 +533,29 @@ export const recordPaymentSuccess = mutation({
       metadata: { planName: args.planName, sessionDate: user.assignedSessionDate },
       createdAt: now,
     });
+
+    // Mail 3: Order & Booking Confirmation Email
+    if (user.email) {
+      const fullAddress = user.address?.line1
+        ? `${user.address.line1}, ${user.address.city || ""} ${user.address.province || ""} ${user.address.postalCode || ""}`.trim()
+        : undefined;
+
+      try {
+        await ctx.scheduler.runAfter(0, internal.emails.sendOrderConfirmationEmail, {
+          to: user.email,
+          userName: user.name || "Dog Parent",
+          dogName: user.dog?.name || "Your Dog",
+          planName: args.planName || "Founding Member Trial Run (3 Sessions)",
+          amountPaid: "$70.00 CAD",
+          sessionDate: user.assignedSessionDate || undefined,
+          timeSlot: user.assignedTimeSlot || undefined,
+          address: fullAddress,
+        });
+      } catch (schedErr) {
+        console.error("[Email Scheduler] Failed to schedule order confirmation email:", schedErr);
+      }
+    }
+
     return userFromDoc(await ctx.db.get(user._id));
   },
 });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Calendar, DollarSign, Download, Package } from 'lucide-react';
+import { TrendingUp, Calendar, DollarSign, Download } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
 import { Booking } from '../../lib/types';
 
