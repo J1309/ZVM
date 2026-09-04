@@ -104,7 +104,12 @@ export default function Navbar() {
             <span>
               FOUNDING MEMBER SPECIAL: 1 extra session FREE on your Trial Run &mdash; 3 sessions for $70
             </span>
-            <a href="/#book-now" className="font-black underline transition hover:text-white">Claim Offer &rarr;</a>
+            <Link
+              to={user ? (isAdmin ? '/admin' : '/dashboard') : '/signup'}
+              className="font-black underline transition hover:text-white"
+            >
+              Claim Offer &rarr;
+            </Link>
           </div>
         )}
         <motion.div

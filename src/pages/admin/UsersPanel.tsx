@@ -759,167 +759,184 @@ export default function AdminUsersPanel() {
                 layout
                 className="bg-dark-800/80 rounded-2xl border border-dark-600 overflow-hidden hover:border-dark-500 transition-colors"
               >
-                <div className="flex items-center gap-3 p-3 sm:p-4 text-left">
-                  {/* Avatar & User Details */}
-                  <button
-                    onClick={() => setViewingUser(enrichedItem)}
-                    className="flex items-center gap-3 flex-1 min-w-0 group"
-                  >
-                    <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/10 border border-brand-500/20 flex items-center justify-center text-sm font-bold text-brand-300 group-hover:scale-105 transition-transform">
-                      {initials(user.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-bold text-white group-hover:text-brand-300 transition-colors truncate">
-                          {user.name}
-                        </p>
-                        {userPayments.some(p => p.planKey === 'trial_run' && p.status === 'paid') && (
-                          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-md">
-                            ⭐ Founding Member
-                          </span>
-                        )}
-                        {user.role === 'admin' && (
-                          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-md">
-                            Admin
-                          </span>
-                        )}
+                <div className="p-3.5 sm:p-4 space-y-2.5">
+                  {/* Top Bar: Identity on Left, Actions on Right */}
+                  <div className="flex items-center justify-between gap-3 min-w-0">
+                    {/* User Identity - clickable to view profile */}
+                    <div
+                      onClick={() => setViewingUser(enrichedItem)}
+                      className="flex items-center gap-3 min-w-0 cursor-pointer group flex-1"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setViewingUser(enrichedItem); }}
+                    >
+                      <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/10 border border-brand-500/20 flex items-center justify-center text-sm font-bold text-brand-300 group-hover:scale-105 transition-transform shadow-inner">
+                        {initials(user.name)}
                       </div>
-                      <p className="text-xs text-dark-400 truncate">{user.email}</p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-white group-hover:text-brand-300 transition-colors truncate">
+                            {user.name || 'Unnamed User'}
+                          </span>
+                          {user.role === 'admin' && (
+                            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-md whitespace-nowrap shrink-0">
+                              Admin
+                            </span>
+                          )}
+                          {userPayments.some(p => p.planKey === 'trial_run' && p.status === 'paid') && (
+                            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-md whitespace-nowrap shrink-0">
+                              ⭐ Founding Member
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-dark-400 truncate">{user.email}</p>
+                      </div>
                     </div>
 
-                    {/* Dog & Certificate Status Pill */}
-                    <div className="hidden md:flex items-center gap-2 shrink-0">
-                      {user.dog?.name ? (
-                        <span className="px-2.5 py-1 text-xs font-semibold rounded-xl bg-dark-700/80 text-dark-200 border border-dark-600 flex items-center gap-1.5">
-                          <Dog className="w-3.5 h-3.5 text-brand-400" />
-                          <span>{user.dog.name}</span>
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 text-xs text-dark-500 rounded-xl bg-dark-700/40 border border-dark-700">No Dog</span>
-                      )}
+                    {/* Actions & Total Spent */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Total Spent */}
+                      <div className="hidden sm:block text-right pr-3 border-r border-dark-700/80">
+                        <p className="text-sm font-bold text-white">{money(totalSpent)}</p>
+                        <p className="text-[10px] text-dark-400 uppercase tracking-wide font-semibold">Total Spent</p>
+                      </div>
 
-                      <span className={`px-2.5 py-1 text-xs font-bold rounded-xl border flex items-center gap-1.5 ${cert.badgeClass}`}>
-                        {cert.status === 'approved' ? (
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : cert.status === 'rejected' ? (
-                          <XCircle className="w-3.5 h-3.5 text-red-400" />
-                        ) : cert.status === 'pending' ? (
-                          <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        ) : (
-                          <Shield className="w-3.5 h-3.5 text-dark-400" />
-                        )}
-                        <span>{cert.label}</span>
+                      {/* Review & Schedule Action Button */}
+                      {!user.accountVerified && user.profileCompleted ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
+                          title="Review Canine Profile, Call Customer & Grant Verification"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-md transition animate-pulse"
+                        >
+                          <PhoneCall className="w-3.5 h-3.5" />
+                          <span className="hidden xs:inline sm:inline">Review &amp; Schedule</span>
+                        </button>
+                      ) : user.accountVerified ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
+                          title={user.assignedSessionDate ? 'Edit Scheduled Session Date & Slot' : 'Set Scheduled Session Date'}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-dark-200 bg-dark-700/90 hover:bg-dark-600 hover:text-white border border-dark-600 rounded-xl transition"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                          <span>{user.assignedSessionDate ? 'Edit Date' : 'Schedule'}</span>
+                        </button>
+                      ) : null}
+
+                      {/* View Profile Popup Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setViewingUser(enrichedItem); }}
+                        title="View Full User & Dog Profile"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/25 rounded-xl transition"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="hidden xs:inline sm:inline">Profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleOpenEditModal(user); }}
+                        title="Edit User Profile"
+                        className="p-2 text-dark-300 hover:text-white hover:bg-dark-700 rounded-lg transition"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id, user.name); }}
+                        title="Delete User"
+                        className="p-2 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : user.id); }}
+                        title={isOpen ? 'Collapse Quick Details' : 'Expand Quick Details'}
+                        className="p-2 text-dark-400 hover:text-white hover:bg-dark-700/60 rounded-lg transition"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Status & Booking Badges Strip */}
+                  <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-dark-700/60 text-xs">
+                    {/* Dog Pill */}
+                    {user.dog?.name ? (
+                      <span className="px-2.5 py-1 text-xs font-semibold rounded-xl bg-dark-700/80 text-dark-200 border border-dark-600 flex items-center gap-1.5">
+                        <Dog className="w-3.5 h-3.5 text-brand-400" />
+                        <span>{user.dog.name}{user.dog.breed ? ` (${user.dog.breed})` : ''}</span>
                       </span>
-                    </div>
+                    ) : (
+                      <span className="px-2.5 py-1 text-xs text-dark-500 rounded-xl bg-dark-700/40 border border-dark-700">No Dog</span>
+                    )}
+
+                    {/* Veterinary Certificate Status Pill */}
+                    <span className={`px-2.5 py-1 text-xs font-bold rounded-xl border flex items-center gap-1.5 ${cert.badgeClass}`}>
+                      {cert.status === 'approved' ? (
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : cert.status === 'rejected' ? (
+                        <XCircle className="w-3.5 h-3.5 text-red-400" />
+                      ) : cert.status === 'pending' ? (
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <Shield className="w-3.5 h-3.5 text-dark-400" />
+                      )}
+                      <span>{cert.label}</span>
+                    </span>
 
                     {/* Account Clearance Pill */}
-                    <div className="hidden lg:flex items-center shrink-0">
-                      {user.accountVerified ? (
-                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Account Cleared</span>
-                        </span>
-                      ) : user.profileCompleted ? (
-                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Needs Clearance</span>
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 text-xs rounded-xl bg-dark-750 text-dark-400 border border-dark-700">
-                          Incomplete Profile
-                        </span>
-                      )}
-                    </div>
+                    {user.accountVerified ? (
+                      <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Account Cleared</span>
+                      </span>
+                    ) : user.profileCompleted ? (
+                      <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Needs Clearance</span>
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 text-xs rounded-xl bg-dark-750 text-dark-400 border border-dark-700">
+                        Incomplete Profile
+                      </span>
+                    )}
 
                     {/* Scheduled Date / Time Slot Pill */}
-                    <div className="hidden xl:flex items-center gap-1.5 shrink-0">
-                      {user.assignedSessionDate ? (
-                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-brand-500/15 text-brand-300 border border-brand-500/30 flex items-center gap-1.5 shadow-sm">
-                          <Calendar className="w-3.5 h-3.5 text-brand-400" />
-                          <span>{user.assignedSessionDate}</span>
-                          {user.hasPaid ? (
-                            <span className="ml-1 px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase">Paid $70</span>
-                          ) : (
-                            <span className="ml-1 px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase">Unpaid</span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs text-dark-500 rounded-xl bg-dark-750 border border-dark-700">
-                          Not Scheduled
-                        </span>
-                      )}
-                    </div>
+                    {user.assignedSessionDate ? (
+                      <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-brand-500/15 text-brand-300 border border-brand-500/30 flex items-center gap-1.5 shadow-sm">
+                        <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                        <span>{user.assignedSessionDate}</span>
+                        {user.assignedTimeSlot && <span className="text-dark-300 font-normal">({user.assignedTimeSlot})</span>}
+                        {user.hasPaid ? (
+                          <span className="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wide">Paid $70</span>
+                        ) : (
+                          <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-wide">Unpaid</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 text-xs text-dark-500 rounded-xl bg-dark-750 border border-dark-700">
+                        Not Scheduled
+                      </span>
+                    )}
 
                     {/* Plan Badge */}
-                    <div className="hidden sm:flex items-center gap-2 shrink-0">
-                      {currentPlan ? (
-                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-xl border ${planStyles[currentPlan.planKey] ?? 'bg-dark-600 text-dark-200 border-dark-500'}`}>
-                          {currentPlan.planName}
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 text-xs rounded-xl bg-dark-700 text-dark-400 border border-dark-600">No plan</span>
-                      )}
+                    {currentPlan ? (
+                      <span className={`px-2.5 py-1 text-xs font-semibold rounded-xl border ${planStyles[currentPlan.planKey] ?? 'bg-dark-600 text-dark-200 border-dark-500'}`}>
+                        {currentPlan.planName}
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 text-xs rounded-xl bg-dark-700 text-dark-400 border border-dark-600">No plan</span>
+                    )}
+
+                    {/* On mobile: Total Spent */}
+                    <div className="sm:hidden ml-auto text-right text-xs">
+                      <span className="text-dark-400 text-[10px] uppercase font-semibold mr-1">Spent:</span>
+                      <span className="font-bold text-white">{money(totalSpent)}</span>
                     </div>
-
-                    <div className="text-right shrink-0 w-20">
-                      <p className="text-sm font-bold text-white">{money(totalSpent)}</p>
-                      <p className="text-[10px] text-dark-400 uppercase tracking-wide font-semibold">total spent</p>
-                    </div>
-                  </button>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0 pl-2 border-l border-dark-700">
-                    {/* Review & Schedule Action Button */}
-                    {!user.accountVerified && user.profileCompleted ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
-                        title="Review Canine Profile, Call Customer & Grant Verification"
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-md transition animate-pulse"
-                      >
-                        <PhoneCall className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Review &amp; Schedule</span>
-                      </button>
-                    ) : user.accountVerified ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
-                        title={user.assignedSessionDate ? 'Edit Scheduled Session Date & Slot' : 'Set Scheduled Session Date'}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-dark-200 bg-dark-700/90 hover:bg-dark-600 hover:text-white border border-dark-600 rounded-xl transition"
-                      >
-                        <Calendar className="w-3.5 h-3.5 text-brand-400" />
-                        <span className="hidden xl:inline">{user.assignedSessionDate ? 'Edit Date' : 'Schedule'}</span>
-                      </button>
-                    ) : null}
-
-                    {/* View Profile Popup Button */}
-                    <button
-                      onClick={() => setViewingUser(enrichedItem)}
-                      title="View Full User & Dog Profile"
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/25 rounded-xl transition"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Profile</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenEditModal(user)}
-                      title="Edit User Profile"
-                      className="p-2 text-dark-300 hover:text-white hover:bg-dark-700 rounded-lg transition"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.id, user.name)}
-                      title="Delete User"
-                      className="p-2 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setExpanded(isOpen ? null : user.id)}
-                      className="p-2 text-dark-400 hover:text-white rounded-lg transition"
-                    >
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                    </button>
                   </div>
                 </div>
 
