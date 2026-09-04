@@ -635,7 +635,7 @@ export default function UserDashboard() {
 
             <div>
               <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
-                My ZoomieVan dashboard
+                My Profile
               </h1>
               <p className="text-xs sm:text-sm text-white/60 font-medium">
                 Client fitness, safety clearances &amp; mobile booking portal
@@ -721,7 +721,7 @@ export default function UserDashboard() {
                       onClick={() => { setActiveTab('dashboard'); setShowUserDropdown(false); }}
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 rounded-xl flex items-center gap-2"
                     >
-                      <User className="w-3.5 h-3.5 text-white/50" /> Dashboard Overview
+                      <User className="w-3.5 h-3.5 text-white/50" /> My Profile
                     </button>
                     <button
                       onClick={() => { setActiveTab('booking'); setShowUserDropdown(false); }}
@@ -774,7 +774,7 @@ export default function UserDashboard() {
               }`}>
                 <div className="w-2 h-2 rounded-full bg-white" />
               </div>
-              <span>My dashboard</span>
+              <span>My Profile</span>
             </button>
 
             <button
@@ -1562,7 +1562,7 @@ export default function UserDashboard() {
                     onClick={() => setActiveTab('dashboard')}
                     className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition"
                   >
-                    Back to Dashboard
+                    Back to Profile
                   </button>
                 </div>
 
@@ -1574,7 +1574,7 @@ export default function UserDashboard() {
                       <span>Account Verification Required to Pay &amp; Finalize Sessions</span>
                     </div>
                     <p className="text-xs text-white/80 leading-relaxed max-w-2xl">
-                      Under Alberta veterinary safety protocols, our mobile team must review your dog's profile and vaccine records before appointments can be confirmed. Please complete and submit your profile in the dashboard to unlock payment and booking.
+                      Under Alberta veterinary safety protocols, our mobile team must review your dog's profile and vaccine records before appointments can be confirmed. Please complete and submit your profile to unlock payment and booking.
                     </p>
                     <button
                       onClick={() => setActiveTab('dashboard')}
@@ -2116,7 +2116,7 @@ export default function UserDashboard() {
                     onClick={() => setActiveTab('dashboard')}
                     className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition"
                   >
-                    Back to Dashboard
+                    Back to Profile
                   </button>
                 </div>
 
@@ -2548,7 +2548,7 @@ export default function UserDashboard() {
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    Accept &amp; Continue to Dashboard
+                    Accept &amp; Continue to Profile
                   </>
                 )}
               </button>
