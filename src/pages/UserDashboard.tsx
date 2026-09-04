@@ -5,8 +5,8 @@ import {
   User, PawPrint, LogOut, Plus, X, Save,
   Loader2, CreditCard, Upload, FileText, CheckCircle2, Sparkles, Star, Clock,
   PhoneCall, AlertCircle, ExternalLink, Trash2, Calendar, Settings,
-  Lock, RefreshCw, Search, ChevronDown, Bell,
-  Edit2
+  Lock, RefreshCw, ChevronDown, Bell,
+  Edit2, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
@@ -200,15 +200,20 @@ export default function UserDashboard() {
   // Submit Profile Handler
   const handleSubmitProfile = async () => {
     if (!allMandatoryComplete) {
-      alert('Please complete all 5 mandatory details (Dog Vitals, Address, Phone, Vaccines, and Terms) before submitting for verification.');
+      // Direct user to the first missing item
+      if (!hasDogVitals) openDogForm();
+      else if (!hasAddress) openAddressForm();
+      else if (!hasPhone) setEditingProfileCard(true);
+      else if (!hasVaccines) setActiveTab('vaccines');
+      else if (!hasLegal) setActiveTab('account');
       return;
     }
     setSubmittingProfile(true);
     setProfileSuccessMsg(null);
     try {
       await submitProfile();
-      setProfileSuccessMsg('Profile and canine health details submitted successfully! Our safety team is reviewing your account.');
-      setTimeout(() => setProfileSuccessMsg(null), 7000);
+      setProfileSuccessMsg('Profile and canine records submitted successfully! Our safety team is now reviewing your account for clearance.');
+      setTimeout(() => setProfileSuccessMsg(null), 8000);
     } catch (err: any) {
       console.error('Failed to submit profile:', err);
       alert(err?.message || 'Failed to submit profile for verification.');
@@ -401,7 +406,7 @@ export default function UserDashboard() {
         vaccines: updatedVaccines,
       });
 
-      setDocUploadSuccess(`Successfully uploaded "${fileName}". Sent for admin verification.`);
+      setDocUploadSuccess(`Successfully uploaded "${fileName}". Sent for safety verification.`);
     } catch (err: any) {
       console.error('Failed to upload document:', err);
       setDocUploadError(err?.message || 'Failed to upload certificate. Please try again.');
@@ -449,7 +454,7 @@ export default function UserDashboard() {
 
   const startCheckout = async () => {
     if (!isAccountVerified) {
-      setCheckoutError('Account verification required: Your profile and canine health records must be verified by an admin before you can pay and finalize sessions.');
+      setCheckoutError('Account verification required: Your canine profile and vaccine records must be approved by our safety team before you can pay and finalize sessions.');
       return;
     }
     if (!fullLaunchActive && selectedPlan !== 'trial_run') {
@@ -505,38 +510,37 @@ export default function UserDashboard() {
   const userInitials = user.name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-slate-900 font-sans relative overflow-x-hidden selection:bg-[#FF6B00] selection:text-white">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans relative overflow-x-hidden selection:bg-[#FF6B00] selection:text-white">
       {/* ========================================================================= */}
-      {/* 🎨 ARTISTIC GEOMETRIC ACCENTS (Directly matching the attached mockup)     */}
+      {/* 🎨 ARTISTIC GEOMETRIC ACCENTS (Mockup bottom-right signature aesthetic)    */}
       {/* ========================================================================= */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Soft atmospheric gradient blurs */}
-        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-[#FF6B00]/5 blur-[120px]" />
-        <div className="absolute top-1/4 -right-40 w-[600px] h-[600px] rounded-full bg-[#071A3D]/5 blur-[140px]" />
+        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-[#FF6B00]/5 blur-[130px]" />
+        <div className="absolute top-1/3 -right-40 w-[600px] h-[600px] rounded-full bg-[#071A3D]/5 blur-[150px]" />
 
-        {/* Floating Angled Rounded Rectangles/Lozenges (Matching the mockup's bottom-right signature aesthetic) */}
+        {/* Floating Angled Rounded Polygons in Brand Palette */}
         <div
-          className="absolute -bottom-24 -right-24 w-[380px] h-[380px] rounded-[54px] bg-gradient-to-tr from-[#FF6B00] via-[#FF8800] to-[#FFA726] shadow-2xl opacity-90 transform -rotate-12"
+          className="absolute -bottom-28 -right-28 w-[420px] h-[420px] rounded-[56px] bg-gradient-to-tr from-[#FF6B00] via-[#FF8800] to-[#FFA726] shadow-2xl opacity-90 transform -rotate-12 pointer-events-none"
           style={{ filter: 'drop-shadow(0 25px 35px rgba(255, 107, 0, 0.35))' }}
         />
         <div
-          className="absolute -bottom-16 right-36 w-[280px] h-[280px] rounded-[48px] bg-gradient-to-tr from-[#FF007A] to-[#FF6B00] shadow-xl opacity-80 transform -rotate-[24deg]"
+          className="absolute -bottom-16 right-44 w-[300px] h-[300px] rounded-[48px] bg-gradient-to-tr from-[#FF007A] to-[#FF6B00] shadow-xl opacity-80 transform -rotate-[22deg] pointer-events-none"
           style={{ filter: 'drop-shadow(0 20px 30px rgba(255, 0, 122, 0.25))' }}
         />
         <div
-          className="absolute bottom-24 -right-16 w-[220px] h-[220px] rounded-[40px] bg-gradient-to-br from-[#FFA726] to-[#FF6B00] shadow-lg opacity-75 transform -rotate-6"
+          className="absolute bottom-28 -right-16 w-[240px] h-[240px] rounded-[40px] bg-gradient-to-br from-[#FFA726] to-[#FF6B00] shadow-lg opacity-75 transform -rotate-6 pointer-events-none"
         />
       </div>
 
-      <div className="relative z-10 max-w-[1340px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="relative z-10 max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-9">
 
         {/* ========================================================================= */}
-        {/* 🌟 TOP HEADER (Logo, Title, Subtitle, Bell, Avatar, User Dropdown)        */}
+        {/* 🌟 TOP HEADER                                                             */}
         {/* ========================================================================= */}
-        <header className="flex items-center justify-between gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-4">
-            {/* Squircle Brand Logo Icon (Matching the mockup's top-left rounded squircle) */}
-            <Link to="/" className="group flex items-center justify-center">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7 sm:mb-9 pb-4 border-b border-slate-200/60">
+          <div className="flex items-center gap-3.5">
+            {/* Squircle Brand Logo Badge */}
+            <Link to="/" className="group flex items-center justify-center shrink-0">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#FF6B00] via-[#FF8800] to-[#FFA726] p-0.5 shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
                 <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center p-1.5">
                   <img src="/images/zvm_logo.png" alt="ZoomieVan" className="w-7 h-7 object-contain" />
@@ -549,18 +553,36 @@ export default function UserDashboard() {
                 My ZoomieVan dashboard
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                Welcome to client fitness &amp; booking portal
+                Client fitness, safety clearances &amp; mobile booking portal
               </p>
             </div>
           </div>
 
-          {/* Right Header Controls: Notification Bell, User Avatar, Hello Dropdown */}
-          <div className="flex items-center gap-3 sm:gap-4 relative" ref={userMenuRef}>
+          {/* Right Header Controls */}
+          <div className="flex items-center gap-3 self-end sm:self-auto relative" ref={userMenuRef}>
+            {/* Account Clearance Pill Badge */}
+            {isAccountVerified ? (
+              <span className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Verified &amp; Cleared</span>
+              </span>
+            ) : isProfileSubmitted ? (
+              <span className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm animate-pulse">
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Under Safety Review</span>
+              </span>
+            ) : (
+              <span className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-orange-50 text-[#FF6B00] border border-orange-200 shadow-sm">
+                <AlertCircle className="w-3.5 h-3.5 text-[#FF6B00]" />
+                <span>Profile Setup Required</span>
+              </span>
+            )}
+
             {/* Notification Bell */}
             <button
               onClick={() => setActiveTab('dashboard')}
               title="Notifications"
-              className="w-10 h-10 rounded-full bg-white hover:bg-slate-50 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-[#071A3D] transition relative"
+              className="w-10 h-10 rounded-full bg-white hover:bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-[#071A3D] transition relative"
             >
               <Bell className="w-4 h-4" />
               {!isAccountVerified && (
@@ -571,16 +593,13 @@ export default function UserDashboard() {
             {/* User Dropdown Trigger */}
             <div
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-2.5 cursor-pointer select-none bg-white hover:bg-slate-50 border border-slate-200/80 rounded-full py-1.5 pl-1.5 pr-3 shadow-sm transition"
+              className="flex items-center gap-2.5 cursor-pointer select-none bg-white hover:bg-slate-50 border border-slate-200 rounded-full py-1.5 pl-1.5 pr-3 shadow-sm transition"
             >
-              {/* User Avatar */}
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#071A3D] p-0.5 shadow-sm">
                 <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-xs font-black text-[#071A3D] font-display">
                   {userInitials}
                 </div>
               </div>
-
-              {/* Hello [Name] with Chevron */}
               <span className="text-xs sm:text-sm font-bold text-slate-800">
                 Hello {userFirstName}
               </span>
@@ -594,19 +613,19 @@ export default function UserDashboard() {
                   initial={{ opacity: 0, y: 8, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  className="absolute right-0 top-12 w-64 rounded-2xl bg-white border border-slate-200/80 shadow-2xl p-2 z-50 text-slate-800"
+                  className="absolute right-0 top-12 w-64 rounded-2xl bg-white border border-slate-200 shadow-2xl p-2 z-50 text-slate-800"
                 >
                   <div className="p-3 border-b border-slate-100">
                     <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
                     <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
-                    <div className="mt-2 flex items-center gap-1.5">
+                    <div className="mt-2">
                       {isAccountVerified ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified Client
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cleared Client
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                          <Clock className="w-3 h-3 text-amber-600" /> Pending Clearance
+                          <Clock className="w-3 h-3 text-amber-600" /> Pending Admin Review
                         </span>
                       )}
                     </div>
@@ -617,19 +636,20 @@ export default function UserDashboard() {
                       onClick={() => { setActiveTab('dashboard'); setShowUserDropdown(false); }}
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2"
                     >
-                      <User className="w-3.5 h-3.5 text-slate-400" /> My Profile
+                      <User className="w-3.5 h-3.5 text-slate-400" /> Dashboard Overview
                     </button>
                     <button
                       onClick={() => { setActiveTab('booking'); setShowUserDropdown(false); }}
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2"
                     >
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" /> Bookings &amp; Schedule
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" /> Bookings &amp; Packages
                     </button>
                     <button
                       onClick={() => { handleRefreshStatus(); setShowUserDropdown(false); }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2"
+                      disabled={refreshingStatus}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 disabled:opacity-50"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-slate-400" /> Refresh Status
+                      <RefreshCw className={`w-3.5 h-3.5 ${refreshingStatus ? 'animate-spin text-[#FF6B00]' : 'text-slate-400'}`} /> Refresh Clearance Status
                     </button>
                   </div>
 
@@ -648,24 +668,24 @@ export default function UserDashboard() {
         </header>
 
         {/* ========================================================================= */}
-        {/* 🎛️ MAIN CANVAS & SIDEBAR LAYOUT (Directly matching the attached mockup)   */}
+        {/* 🎛️ MAIN NAVIGATION & CONTENT LAYOUT                                       */}
         {/* ========================================================================= */}
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-7 items-start">
 
-          {/* Left Vertical Navigation Rail (Matches the mockup's left sidebar) */}
-          <aside className="w-full lg:w-48 xl:w-52 shrink-0 flex lg:flex-col gap-1 sm:gap-1.5 overflow-x-auto pb-2 lg:pb-0 select-none">
+          {/* Left Vertical Navigation Rail (Matches Mockup) */}
+          <aside className="w-full lg:w-48 xl:w-52 shrink-0 flex lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0 select-none">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition text-left whitespace-nowrap ${
                 activeTab === 'dashboard'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-extrabold'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                 activeTab === 'dashboard'
                   ? 'bg-gradient-to-tr from-[#FF6B00] to-[#FFA726] text-white shadow-sm shadow-orange-500/30'
-                  : 'bg-slate-200/70 text-slate-500'
+                  : 'bg-slate-200 text-slate-500'
               }`}>
                 <div className="w-2 h-2 rounded-full bg-white" />
               </div>
@@ -676,14 +696,16 @@ export default function UserDashboard() {
               onClick={() => setActiveTab('booking')}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition text-left whitespace-nowrap ${
                 activeTab === 'booking'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-extrabold'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <Calendar className="w-4 h-4 text-slate-400" />
               <span>Bookings</span>
-              {!isAccountVerified && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] ml-auto" />
+              {!isAccountVerified ? (
+                <Lock className="w-3.5 h-3.5 text-amber-500 ml-auto" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 ml-auto" />
               )}
             </button>
 
@@ -691,19 +713,22 @@ export default function UserDashboard() {
               onClick={() => setActiveTab('dog')}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition text-left whitespace-nowrap ${
                 activeTab === 'dog'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-extrabold'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <PawPrint className="w-4 h-4 text-slate-400" />
               <span>Dog Profile</span>
+              {hasDogVitals && (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 ml-auto" />
+              )}
             </button>
 
             <button
               onClick={() => setActiveTab('vaccines')}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition text-left whitespace-nowrap ${
                 activeTab === 'vaccines'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-extrabold'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
@@ -718,64 +743,50 @@ export default function UserDashboard() {
               onClick={() => setActiveTab('account')}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition text-left whitespace-nowrap ${
                 activeTab === 'account'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-extrabold'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <Settings className="w-4 h-4 text-slate-400" />
               <span>Settings</span>
             </button>
-
-            <div className="pt-2 mt-2 border-t border-slate-200/60 hidden lg:block">
-              <button
-                onClick={() => {
-                  setDeleteConfirmText('');
-                  setDeleteError('');
-                  setShowDeleteModal(true);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 transition text-left"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                <span>Delete Account</span>
-              </button>
-            </div>
           </aside>
 
-          {/* Center Main Card Container Canvas */}
-          <div className="flex-1 w-full rounded-[36px] bg-[#EEF2F6]/75 border border-white/80 p-5 sm:p-7 md:p-8 shadow-sm backdrop-blur-md">
+          {/* Center Main Card Container Canvas (Spacious & Clean) */}
+          <div className="flex-1 w-full rounded-[36px] bg-[#EEF2F6]/80 border border-white/90 p-6 sm:p-8 md:p-9 shadow-sm backdrop-blur-md">
 
-            {/* Notification alert banner if profile incomplete or submitted */}
+            {/* Notification alert banner */}
             {profileSuccessMsg && (
-              <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-sm">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm font-bold flex items-center gap-3 shadow-sm">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span>{profileSuccessMsg}</span>
               </div>
             )}
 
             {/* ========================================================================= */}
-            {/* 🖼️ VIEW 1: MY DASHBOARD (EXACT 2-COLUMN LAYOUT FROM THE ATTACHED IMAGE)    */}
+            {/* 🖼️ VIEW 1: MY DASHBOARD (SPACIOUS 2-COLUMN LAYOUT MATCHING MOCKUP)        */}
             {/* ========================================================================= */}
             {activeTab === 'dashboard' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-7 items-stretch">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 sm:gap-8 items-stretch">
 
                 {/* --------------------------------------------------------------------- */}
                 {/* 👤 LEFT COLUMN: TALL PROFILE CARD ("My profile")                      */}
                 {/* --------------------------------------------------------------------- */}
-                <div className="lg:col-span-5 bg-white rounded-[28px] border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between space-y-5">
-                  {/* Portrait photo arched / rounded at the top (Matching the mockup) */}
+                <div className="lg:col-span-5 bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-7 sm:p-8 flex flex-col justify-between space-y-6">
+                  {/* Portrait photo arched / rounded at the top (Mockup Style) */}
                   <div className="relative rounded-2xl overflow-hidden bg-slate-100 shadow-inner group">
                     <img
                       src="/images/how-dog-profile.jpg"
                       alt="Canine Athlete &amp; Owner"
-                      className="w-full h-56 sm:h-64 object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-60 sm:h-68 object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                      <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-[10px] font-black uppercase tracking-wider text-[#071A3D] shadow-sm">
-                        {user.dog?.name ? `Athlete: ${user.dog.name}` : 'ZoomieVan Client'}
+                    <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between">
+                      <span className="px-3 py-1 rounded-full bg-white/95 backdrop-blur-md text-[10px] font-black uppercase tracking-wider text-[#071A3D] shadow-sm">
+                        {user.dog?.name ? `Athlete: ${user.dog.name}` : 'Canine Athlete'}
                       </span>
                       {hasDogVitals && (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/90 text-white text-[10px] font-bold backdrop-blur-md shadow-sm">
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-sm">
                           {user.dog.breed}
                         </span>
                       )}
@@ -784,24 +795,24 @@ export default function UserDashboard() {
 
                   {/* Profile Header & Metadata */}
                   <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                       <div>
                         <h2 className="font-display text-xl font-extrabold text-[#071A3D]">
                           My profile
                         </h2>
-                        <p className="text-[11px] text-slate-400">
-                          {isAccountVerified ? 'Verified Active Client' : (isProfileSubmitted ? 'Submitted for Admin Review' : 'Profile Setup Required')}
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {isAccountVerified ? '✓ Cleared for Mobile Sessions' : (isProfileSubmitted ? '⏳ Submitted for Safety Review' : 'Profile Setup Required')}
                         </p>
                       </div>
 
                       <div className="text-right text-[10px] text-slate-400 font-mono leading-tight">
-                        <p>Member 2026</p>
-                        <p className="text-slate-500 font-bold">Edmonton, AB</p>
+                        <p>Edmonton, AB</p>
+                        <p className="text-slate-500 font-bold mt-0.5">Doorstep Route</p>
                       </div>
                     </div>
 
                     {/* Form Fields: Minimalist Underline Input Look (Matches image) */}
-                    <div className="space-y-3 pt-1">
+                    <div className="space-y-3.5 pt-1">
                       {/* Name Field */}
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
@@ -820,6 +831,7 @@ export default function UserDashboard() {
                             <button
                               onClick={() => setEditingProfileCard(true)}
                               className="text-slate-400 hover:text-[#FF6B00] transition"
+                              title="Edit name"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -830,7 +842,7 @@ export default function UserDashboard() {
                       {/* Phone Field */}
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                          Phone Number
+                          Contact Phone (For Scheduling Call)
                         </span>
                         {editingProfileCard ? (
                           <input
@@ -843,11 +855,12 @@ export default function UserDashboard() {
                         ) : (
                           <div className="flex items-center justify-between border-b border-slate-200 py-1">
                             <span className="text-sm font-mono font-semibold text-slate-800">
-                              {user.phone || 'No phone set (Required)'}
+                              {user.phone || '⚠️ Missing phone (Required)'}
                             </span>
                             <button
                               onClick={() => setEditingProfileCard(true)}
                               className="text-slate-400 hover:text-[#FF6B00] transition"
+                              title="Edit phone"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -865,25 +878,25 @@ export default function UserDashboard() {
                         </div>
                       </div>
 
-                      {/* Dog Vitals Quick Note */}
+                      {/* Canine Athlete Vitals Field */}
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
                           Canine Athlete
                         </span>
                         <div className="flex items-center justify-between border-b border-slate-200 py-1">
                           <span className="text-xs text-slate-700 font-medium">
-                            {hasDogVitals ? `${user.dog.name} (${user.dog.breed}, ${user.dog.weight} lbs)` : 'Vitals missing — Click to add'}
+                            {hasDogVitals ? `${user.dog.name} (${user.dog.breed}, ${user.dog.weight} lbs)` : '⚠️ Vitals not registered yet'}
                           </span>
                           <button
                             onClick={openDogForm}
                             className="text-xs font-bold text-[#FF6B00] hover:underline"
                           >
-                            {hasDogVitals ? 'Edit' : 'Add'}
+                            {hasDogVitals ? 'Edit' : 'Add Dog'}
                           </button>
                         </div>
                       </div>
 
-                      {/* SMS & VIP Alerts Switch (Matching the mockup's "SMS alerts activation" toggle) */}
+                      {/* SMS alerts activation toggle switch (Directly matches mockup) */}
                       <div className="pt-2 flex items-center justify-between">
                         <span className="text-xs font-semibold text-slate-700">
                           SMS alerts activation
@@ -905,20 +918,20 @@ export default function UserDashboard() {
                     </div>
                   </div>
 
-                  {/* Centered Pill Action Button (Matches the mockup's gradient pill "Save" button) */}
-                  <div className="pt-3 flex justify-center">
+                  {/* Centered Pill Action Button (Matches Mockup) */}
+                  <div className="pt-2 flex flex-col items-center gap-2">
                     {editingProfileCard ? (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={handleSaveProfileCard}
                           disabled={savingProfileCard}
-                          className="px-8 py-2.5 rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                          className="px-8 py-3 rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                         >
-                          {savingProfileCard ? 'Saving...' : 'Save Details'}
+                          {savingProfileCard ? 'Saving...' : 'Save Profile Changes'}
                         </button>
                         <button
                           onClick={() => setEditingProfileCard(false)}
-                          className="px-4 py-2.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition"
+                          className="px-4 py-3 rounded-full bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition"
                         >
                           Cancel
                         </button>
@@ -926,63 +939,69 @@ export default function UserDashboard() {
                     ) : !isProfileSubmitted ? (
                       <button
                         onClick={handleSubmitProfile}
-                        disabled={!allMandatoryComplete || submittingProfile}
-                        className="w-full sm:w-auto px-8 py-2.5 rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        disabled={submittingProfile}
+                        className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] text-white font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       >
                         {submittingProfile ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Submitting...</span>
+                            <span>Submitting for Clearance...</span>
+                          </>
+                        ) : allMandatoryComplete ? (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            <span>Create &amp; Submit Account Profile</span>
                           </>
                         ) : (
-                          <span>{allMandatoryComplete ? 'Submit Profile For Clearance' : 'Create & Submit Profile'}</span>
+                          <span>Complete Profile ({mandatoryCompletedCount} of {mandatoryTotal} Done)</span>
                         )}
                       </button>
                     ) : (
                       <button
                         onClick={() => setEditingProfileCard(true)}
-                        className="px-8 py-2.5 rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        className="px-8 py-3 rounded-full bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
                       >
                         Save
                       </button>
+                    )}
+
+                    {!isProfileSubmitted && !allMandatoryComplete && (
+                      <p className="text-[11px] text-slate-400 text-center">
+                        Fill all 5 safety requirements on the right to submit for admin clearance.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {/* --------------------------------------------------------------------- */}
-                {/* 📑 RIGHT COLUMN: TWO STACKED CARDS (Matches mockup right cards)       */}
+                {/* 📑 RIGHT COLUMN: TWO SPACIOUS STACKED CARDS                           */}
                 {/* --------------------------------------------------------------------- */}
-                <div className="lg:col-span-7 flex flex-col gap-6 sm:gap-7">
+                <div className="lg:col-span-7 flex flex-col gap-7 sm:gap-8">
 
                   {/* =================================================================== */}
                   {/* 💳 TOP RIGHT CARD: "My ZoomieVan accounts"                          */}
                   {/* =================================================================== */}
-                  <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-sm p-6 space-y-4">
-                    {/* Header Row: Title on Left, Search & Edit Pill on Right */}
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h3 className="font-display text-base sm:text-lg font-extrabold text-[#071A3D]">
-                        My ZoomieVan accounts
-                      </h3>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleRefreshStatus}
-                          disabled={refreshingStatus}
-                          className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
-                          title="Refresh status"
-                        >
-                          <Search className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setActiveTab('account')}
-                          className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
-                        >
-                          Edit
-                        </button>
+                  <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-7 sm:p-8 space-y-5">
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                      <div>
+                        <h3 className="font-display text-base sm:text-lg font-extrabold text-[#071A3D]">
+                          My ZoomieVan accounts
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Membership status &amp; doorstep service clearance
+                        </p>
                       </div>
+
+                      <button
+                        onClick={() => setActiveTab('account')}
+                        className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+                      >
+                        Edit
+                      </button>
                     </div>
 
-                    {/* Row 1: Active Account / Safety Clearance (Matches Mockup's Active Account) */}
+                    {/* Row 1: Account Safety Clearance (Matches Mockup's Active Account) */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                       <div>
                         <p className="text-xs sm:text-sm font-bold text-slate-800">
@@ -993,7 +1012,7 @@ export default function UserDashboard() {
                         </p>
                       </div>
 
-                      {/* Pill Button (Matches the mockup's colored button) */}
+                      {/* Pill Button (Matching Mockup button style) */}
                       {isAccountVerified ? (
                         <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm self-start sm:self-auto">
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1006,12 +1025,7 @@ export default function UserDashboard() {
                         </span>
                       ) : (
                         <button
-                          onClick={() => {
-                            if (!hasDogVitals) openDogForm();
-                            else if (!hasAddress) openAddressForm();
-                            else if (!hasVaccines) setActiveTab('vaccines');
-                            else handleSubmitProfile();
-                          }}
+                          onClick={handleSubmitProfile}
                           className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FFA726] text-white text-xs font-bold shadow-sm hover:opacity-95 transition self-start sm:self-auto"
                         >
                           Setup Required
@@ -1019,14 +1033,14 @@ export default function UserDashboard() {
                       )}
                     </div>
 
-                    {/* Row 2: Founding Membership Tier */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                    {/* Row 2: Membership Tier */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
                       <div>
                         <p className="text-xs sm:text-sm font-bold text-slate-800">
                           Membership Tier
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          {foundingApplies ? 'Founding Member (3 Runs for $70 CAD)' : 'Standard Client Account'}
+                          {foundingApplies ? 'Founding Member Early Access (3 Runs for $70 CAD)' : 'Standard Client Account'}
                         </p>
                       </div>
 
@@ -1043,13 +1057,13 @@ export default function UserDashboard() {
                     </div>
 
                     {/* Row 3: Service Address & Sector */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
                       <div>
                         <p className="text-xs sm:text-sm font-bold text-slate-800">
                           Service Address
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          {hasAddress ? `${user.address.line1}, ${user.address.city}` : 'No address set'}
+                          {hasAddress ? `${user.address.line1}, ${user.address.city}` : 'No doorstep address configured'}
                         </p>
                       </div>
 
@@ -1063,213 +1077,281 @@ export default function UserDashboard() {
                   </div>
 
                   {/* =================================================================== */}
-                  {/* 📋 BOTTOM RIGHT CARD: "My fitness records & schedule" ("My bills")   */}
+                  {/* 📋 BOTTOM RIGHT CARD: FLOW-DRIVEN & UNCLUTTERED                     */}
                   {/* =================================================================== */}
-                  <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-sm p-6 space-y-4">
-                    {/* Header Row: "My bills" style list */}
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h3 className="font-display text-base sm:text-lg font-extrabold text-[#071A3D]">
-                        My fitness records &amp; schedule
-                      </h3>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => setActiveTab('booking')}
-                          className="px-3.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
-                        >
-                          Filter by ▾
-                        </button>
+                  <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-7 sm:p-8 space-y-5">
+                    
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                      <div>
+                        <h3 className="font-display text-base sm:text-lg font-extrabold text-[#071A3D]">
+                          {!isAccountVerified ? 'Account Verification & Safety Steps' : 'My Fitness Records & Schedule'}
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {!isAccountVerified
+                            ? `${mandatoryCompletedCount} of ${mandatoryTotal} safety requirements completed`
+                            : 'Active mobile bookings & canine workout schedule'}
+                        </p>
                       </div>
+
+                      {!isAccountVerified && (
+                        <span className="text-xs font-bold text-[#FF6B00] bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+                          {mandatoryCompletedCount}/{mandatoryTotal} Done
+                        </span>
+                      )}
                     </div>
 
-                    {/* Status List with Colored Dots & Rounded Pill Badges (Matches Mockup) */}
-                    <div className="space-y-3 pt-1">
-
-                      {/* 1. Rabies & DHPP Vaccination Certificate */}
-                      <div className="flex items-center justify-between gap-3 py-1">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                            user.vaccines?.status === 'approved'
-                              ? 'bg-emerald-500'
-                              : user.vaccines?.rabiesFileName
-                                ? 'bg-amber-400 animate-pulse'
-                                : 'bg-red-400'
-                          }`} />
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-                              Vaccination record (Rabies / DHPP)
-                            </span>
-                            <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
-                              {user.vaccines?.rabiesFileName || 'Mandatory certificate'}
-                            </span>
+                    {/* STATE A: UNVERIFIED ACCOUNT (GUIDED ONBOARDING CHECKLIST) */}
+                    {!isAccountVerified ? (
+                      <div className="space-y-3.5">
+                        {/* 1. Canine Athlete Vitals */}
+                        <div className="flex items-center justify-between gap-3 py-1.5">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 ${hasDogVitals ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-red-400'}`} />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                1. Canine athlete vitals
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {hasDogVitals ? `${user.dog.name} (${user.dog.breed}, ${user.dog.weight} lbs)` : 'Name, breed, weight & age required'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
 
-                        {user.vaccines?.status === 'approved' ? (
-                          <span className="px-4 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                            Verified
-                          </span>
-                        ) : user.vaccines?.rabiesFileName ? (
-                          <span className="px-4 py-1 rounded-full bg-amber-500 text-white text-xs font-bold shadow-sm">
-                            In review
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => setActiveTab('vaccines')}
-                            className="px-4 py-1 rounded-full bg-[#FF6B00] hover:bg-orange-600 text-white text-xs font-bold shadow-sm transition"
-                          >
-                            Upload record
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 2. Canine Athlete Dossier */}
-                      <div className="flex items-center justify-between gap-3 py-1">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                            hasDogVitals ? 'bg-emerald-500' : 'bg-red-400'
-                          }`} />
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-                              Canine athlete vitals
-                            </span>
-                            <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
-                              {hasDogVitals ? `${user.dog.name} (${user.dog.weight} lbs)` : 'Weight, age, breed'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {hasDogVitals ? (
-                          <span className="px-4 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                            Complete
-                          </span>
-                        ) : (
                           <button
                             onClick={openDogForm}
-                            className="px-4 py-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-sm transition"
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition ${
+                              hasDogVitals ? 'bg-emerald-500 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
+                            }`}
                           >
-                            Add vitals
+                            {hasDogVitals ? 'Complete' : 'Add Vitals'}
                           </button>
-                        )}
-                      </div>
-
-                      {/* 3. Slatmill Fitness Package */}
-                      <div className="flex items-center justify-between gap-3 py-1">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                            checkoutStatus === 'success' ? 'bg-emerald-500' : 'bg-amber-400'
-                          }`} />
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-                              Slatmill fitness package
-                            </span>
-                            <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
-                              {foundingApplies ? 'Founding Member Trial ($70)' : currentPlan.name}
-                            </span>
-                          </div>
                         </div>
 
-                        {checkoutStatus === 'success' ? (
-                          <span className="px-4 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                            Paid &amp; Active
-                          </span>
-                        ) : (
+                        {/* 2. Service Address */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 ${hasAddress ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-amber-400'}`} />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                2. Doorstep service address
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {hasAddress ? `${user.address.line1}, ${user.address.city}` : 'Where the mobile gym van arrives'}
+                              </p>
+                            </div>
+                          </div>
+
                           <button
-                            onClick={() => setActiveTab('booking')}
-                            className="px-4 py-1 rounded-full bg-[#FF6B00] hover:bg-orange-600 text-white text-xs font-bold shadow-sm transition"
+                            onClick={openAddressForm}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition ${
+                              hasAddress ? 'bg-emerald-500 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
+                            }`}
                           >
-                            Select plan
+                            {hasAddress ? 'Complete' : 'Set Address'}
                           </button>
-                        )}
-                      </div>
-
-                      {/* 4. Personal Concierge Doorstep Scheduling */}
-                      <div className="flex items-center justify-between gap-3 py-1">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                            hasPhone ? 'bg-emerald-500' : 'bg-amber-400'
-                          }`} />
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-                              Doorstep scheduling call
-                            </span>
-                            <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
-                              {hasPhone ? user.phone : 'Phone required'}
-                            </span>
-                          </div>
                         </div>
 
-                        {hasPhone ? (
-                          <span className="px-4 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                            Call ready
-                          </span>
-                        ) : (
+                        {/* 3. Owner Contact Phone */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 ${hasPhone ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-amber-400'}`} />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                3. Owner contact phone
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {hasPhone ? user.phone : 'Owner will call this number to coordinate sessions'}
+                              </p>
+                            </div>
+                          </div>
+
                           <button
                             onClick={() => setEditingProfileCard(true)}
-                            className="px-4 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm transition"
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition ${
+                              hasPhone ? 'bg-emerald-500 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
+                            }`}
                           >
-                            Add phone
+                            {hasPhone ? 'Complete' : 'Add Phone'}
                           </button>
-                        )}
-                      </div>
-
-                      {/* 5. Liability Waiver & Service Terms */}
-                      <div className="flex items-center justify-between gap-3 py-1">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                            hasLegal ? 'bg-emerald-500' : 'bg-red-400'
-                          }`} />
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-                              Liability waiver &amp; terms
-                            </span>
-                            <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
-                              No-refund safety policy
-                            </span>
-                          </div>
                         </div>
 
-                        {hasLegal ? (
-                          <span className="px-4 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                            Signed
-                          </span>
-                        ) : (
+                        {/* 4. Vaccine Certificate */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 ${
+                              user.vaccines?.status === 'approved'
+                                ? 'bg-emerald-500 ring-4 ring-emerald-100'
+                                : user.vaccines?.rabiesFileName
+                                  ? 'bg-amber-400 ring-4 ring-amber-100 animate-pulse'
+                                  : 'bg-red-400'
+                            }`} />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                4. Rabies &amp; DHPP vaccination record
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {user.vaccines?.rabiesFileName ? `Uploaded: ${user.vaccines.rabiesFileName}` : 'Mandatory Alberta health immunization'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => setActiveTab('vaccines')}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition ${
+                              user.vaccines?.status === 'approved'
+                                ? 'bg-emerald-500 text-white'
+                                : user.vaccines?.rabiesFileName
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-[#FF6B00] hover:bg-orange-600 text-white'
+                            }`}
+                          >
+                            {user.vaccines?.status === 'approved' ? 'Verified' : user.vaccines?.rabiesFileName ? 'In Review' : 'Upload'}
+                          </button>
+                        </div>
+
+                        {/* 5. Liability Waiver */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 ${hasLegal ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-red-400'}`} />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                5. Liability waiver &amp; terms
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {hasLegal ? 'Terms accepted & agreed' : 'Strict no-refund policy & canine exercise release'}
+                              </p>
+                            </div>
+                          </div>
+
                           <button
                             onClick={() => setActiveTab('account')}
-                            className="px-4 py-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-sm transition"
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition ${
+                              hasLegal ? 'bg-emerald-500 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
+                            }`}
                           >
-                            Sign terms
+                            {hasLegal ? 'Signed' : 'Sign Terms'}
                           </button>
-                        )}
-                      </div>
-
-                      {/* 6. Account Deletion Pill */}
-                      <div className="flex items-center justify-between gap-3 py-1 pt-2 border-t border-slate-100">
-                        <div className="flex items-center gap-3">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-red-500" />
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold text-red-600">
-                              Permanently delete account
-                            </span>
-                            <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
-                              Irreversible data wipe
-                            </span>
-                          </div>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            setDeleteConfirmText('');
-                            setDeleteError('');
-                            setShowDeleteModal(true);
-                          }}
-                          className="px-4 py-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-sm transition"
-                        >
-                          Delete account
-                        </button>
+                        {/* Gated Booking & Payment Notice */}
+                        <div className="mt-4 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-3">
+                          <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-amber-900">
+                              Session Payment &amp; Scheduling Locked
+                            </p>
+                            <p className="text-[11px] text-amber-800 leading-relaxed">
+                              You cannot pay or finalize sessions until your profile is created and verified by our safety team. Once submitted and cleared by an admin, Stripe checkout unlocks automatically.
+                            </p>
+                          </div>
+                        </div>
                       </div>
+                    ) : (
+                      /* STATE B: VERIFIED ACCOUNT (ACTIVE FITNESS RECORDS) */
+                      <div className="space-y-3.5">
+                        {/* Package Item */}
+                        <div className="flex items-center justify-between gap-3 py-1.5">
+                          <div className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-100 shrink-0" />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                Mobile slatmill package
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {foundingApplies ? 'Founding Member Trial Run (3 Runs for $70)' : currentPlan.name}
+                              </p>
+                            </div>
+                          </div>
 
-                    </div>
+                          <button
+                            onClick={() => setActiveTab('booking')}
+                            className="px-4 py-1.5 rounded-full bg-[#FF6B00] hover:bg-orange-600 text-white text-xs font-bold shadow-sm transition"
+                          >
+                            Book &amp; Pay
+                          </button>
+                        </div>
+
+                        {/* Scheduling Call Item */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-100 shrink-0" />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                Personal concierge scheduling
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                Owner will call {user.phone} to coordinate appointments
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
+                            Call Ready
+                          </span>
+                        </div>
+
+                        {/* Vaccine Item */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-100 shrink-0" />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                Rabies &amp; DHPP vaccination clearance
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {user.vaccines?.rabiesFileName || 'Verified Certificate'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-sm">
+                            Approved ✓
+                          </span>
+                        </div>
+
+                        {/* Doorstep Location */}
+                        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-100 shrink-0" />
+                            <div>
+                              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                                Doorstep service address
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {user.address.line1}, {user.address.city}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="px-4 py-1.5 rounded-full bg-slate-800 text-white text-xs font-bold shadow-sm">
+                            Active Route
+                          </span>
+                        </div>
+
+                        {/* Unlocked Booking Banner */}
+                        <div className="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
+                            <div>
+                              <p className="text-xs font-bold text-emerald-900">
+                                Account Cleared for Active Booking!
+                              </p>
+                              <p className="text-[11px] text-emerald-700">
+                                You have full access to pick dates and pay securely via Stripe.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab('booking')}
+                            className="px-4 py-2 rounded-full bg-[#FF6B00] hover:bg-orange-600 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 shrink-0"
+                          >
+                            <span>Book Now</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -1277,7 +1359,7 @@ export default function UserDashboard() {
             )}
 
             {/* ========================================================================= */}
-            {/* 🏃 VIEW 2: BOOKINGS & SCHEDULE (PRESERVING FULL 3-STEP WORKFLOW)           */}
+            {/* 🏃 VIEW 2: BOOKINGS & SCHEDULE (3-STEP STRIPE FLOW)                       */}
             {/* ========================================================================= */}
             {activeTab === 'booking' && (
               <div className="space-y-6">
@@ -1297,6 +1379,25 @@ export default function UserDashboard() {
                     Back to Dashboard
                   </button>
                 </div>
+
+                {/* Gated Alert Message if Not Verified */}
+                {!isAccountVerified && (
+                  <div className="p-5 rounded-3xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
+                    <div className="flex items-center gap-2.5 font-bold text-sm">
+                      <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+                      <span>Account Verification Required to Pay &amp; Finalize Sessions</span>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed max-w-2xl">
+                      Under Alberta veterinary safety protocols, our mobile team must review your dog's profile and vaccine records before appointments can be confirmed. Please complete and submit your profile in the dashboard to unlock payment and booking.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('dashboard')}
+                      className="mt-1 px-4 py-2 rounded-full bg-[#FF6B00] text-white text-xs font-bold hover:bg-orange-600 transition"
+                    >
+                      Complete Profile Now
+                    </button>
+                  </div>
+                )}
 
                 {/* Launch Countdown Banner */}
                 {!fullLaunchActive ? (
@@ -1320,7 +1421,6 @@ export default function UserDashboard() {
                         </p>
                       </div>
 
-                      {/* Countdown Cards */}
                       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                         {[
                           { label: 'Days', val: countdown.days },
@@ -1347,7 +1447,7 @@ export default function UserDashboard() {
                 )}
 
                 {/* Step 1 — Choose your plan */}
-                <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FF6B00] text-xs font-black text-white shadow-md">1</span>
                     <h3 className="font-display text-lg font-bold text-[#071A3D]">Choose Your Plan</h3>
@@ -1420,26 +1520,14 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
-                {/* Step 2 — Pick & Confirm Sessions (Gated by Account Verification) */}
-                <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                {/* Step 2 — Pick & Confirm Sessions */}
+                <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FF6B00] text-xs font-black text-white shadow-md">2</span>
                     <h3 className="font-display text-lg font-bold text-[#071A3D]">
                       {foundingApplies ? 'VIP Personal Scheduling Concierge' : 'Pick & Confirm Your Sessions'}
                     </h3>
                   </div>
-
-                  {!isAccountVerified && (
-                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
-                      <div className="flex items-center gap-2 font-bold text-sm">
-                        <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Account Verification Required to Finalize Sessions</span>
-                      </div>
-                      <p className="text-xs text-amber-800 leading-relaxed">
-                        Under Alberta canine safety regulations, our mobile van team reviews your dog profile and vaccine records before appointments can be scheduled. Submit your profile and wait for admin approval to finalize your calendar slots.
-                      </p>
-                    </div>
-                  )}
 
                   {foundingApplies ? (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 space-y-4">
@@ -1514,8 +1602,8 @@ export default function UserDashboard() {
                   )}
                 </div>
 
-                {/* Step 3 — Pay for your plan (STRICTLY GATED BY ACCOUNT VERIFICATION) */}
-                <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                {/* Step 3 — Pay for your plan (Strictly Gated by Account Verification) */}
+                <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FF6B00] text-xs font-black text-white shadow-md">3</span>
                     <h3 className="font-display text-lg font-bold text-[#071A3D]">Pay for Your Plan</h3>
@@ -1533,7 +1621,6 @@ export default function UserDashboard() {
                     </div>
                   )}
 
-                  {/* Terms checkbox if not accepted */}
                   {!hasLegal && (
                     <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/50 space-y-3">
                       <label className="flex items-start gap-3 cursor-pointer text-xs text-slate-700">
@@ -1557,7 +1644,6 @@ export default function UserDashboard() {
                     </div>
                   )}
 
-                  {/* Checkout Button */}
                   <button
                     onClick={startCheckout}
                     disabled={
@@ -1623,7 +1709,7 @@ export default function UserDashboard() {
                 </div>
 
                 {hasDogVitals ? (
-                  <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-5">
+                  <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-7 sm:p-8 space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                         <span className="text-[10px] uppercase font-bold text-slate-400">Dog Name</span>
@@ -1693,7 +1779,7 @@ export default function UserDashboard() {
                   </div>
 
                   {user.vaccines?.status && (
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${
+                    <span className={`px-3.5 py-1.5 text-xs font-bold rounded-full ${
                       user.vaccines.status === 'approved'
                         ? 'bg-emerald-100 text-emerald-800'
                         : user.vaccines.status === 'rejected'
@@ -1705,7 +1791,6 @@ export default function UserDashboard() {
                   )}
                 </div>
 
-                {/* Dropzone Container */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1817,7 +1902,7 @@ export default function UserDashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Service Address Card */}
-                  <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4">
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-7 shadow-sm flex flex-col justify-between space-y-4">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400">Van Service Address</span>
                       {hasAddress ? (
@@ -1842,7 +1927,7 @@ export default function UserDashboard() {
                   </div>
 
                   {/* Legal Policies Card */}
-                  <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4">
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-7 shadow-sm flex flex-col justify-between space-y-4">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400">Legal Agreement &amp; Policies</span>
                       <div className="mt-2 space-y-1">
@@ -1864,7 +1949,7 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Danger Zone: Permanent Account Deletion */}
-                <div className="bg-red-50/50 rounded-3xl border border-red-200 p-6 space-y-3">
+                <div className="bg-red-50/50 rounded-3xl border border-red-200 p-7 space-y-3">
                   <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
                     <Trash2 className="w-4 h-4" />
                     <span>Danger Zone: Permanently Delete Account</span>
@@ -1900,7 +1985,7 @@ export default function UserDashboard() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
           >
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="font-display text-lg font-bold text-[#071A3D]">
                 {hasDogVitals ? 'Edit Canine Athlete Profile' : 'Add Canine Athlete'}
               </h2>
@@ -1908,7 +1993,7 @@ export default function UserDashboard() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-6 space-y-4">
               <p className="text-xs text-[#FF6B00] font-semibold">* Required fields for safety calibration</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -1945,7 +2030,7 @@ export default function UserDashboard() {
                 <textarea value={dogForm.reactivityNotes} onChange={e => setDogForm({ ...dogForm, reactivityNotes: e.target.value })} placeholder="Any behavioral notes, fears, or special handling instructions..." className="w-full h-20 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#FF6B00] resize-none" />
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-slate-100">
+            <div className="flex justify-end gap-3 p-6 border-t border-slate-100">
               <button onClick={() => setShowDogForm(false)} className="px-5 py-2.5 text-sm font-medium rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
                 Cancel
               </button>
@@ -1972,13 +2057,13 @@ export default function UserDashboard() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
           >
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="font-display text-lg font-bold text-[#071A3D]">Edit Van Service Address</h2>
               <button onClick={() => setShowAddressForm(false)} className="p-1 text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-6 space-y-4">
               <p className="text-xs text-[#FF6B00] font-semibold">* Required fields for doorstep van arrival</p>
               <div className="space-y-1.5">
                 <label className="text-xs text-slate-600 font-bold">Street Address <span className="text-red-500">*</span></label>
@@ -2021,7 +2106,7 @@ export default function UserDashboard() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-slate-100">
+            <div className="flex justify-end gap-3 p-6 border-t border-slate-100">
               <button
                 onClick={() => setShowAddressForm(false)}
                 className="px-5 py-2.5 text-sm font-medium rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
