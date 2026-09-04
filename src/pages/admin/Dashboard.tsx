@@ -356,7 +356,7 @@ export default function AdminDashboard() {
       <div className="p-5 bg-dark-700/50 rounded-xl border border-dark-600">
         <p className="text-xs text-dark-400 mb-2 uppercase tracking-wider">Operations &amp; Revenue Overview</p>
         <p className="text-dark-200 text-sm leading-relaxed">
-          {activeVans} vans actively serving {activeZones} zones across Edmonton and Alberta.
+          {activeZones} service zones active across Edmonton and Alberta.
           {pendingVaccines > 0 && ` ${pendingVaccines} vaccine records pending review.`}
           {' '}Total paid bookings amount to <strong className="text-emerald-300">${totalRevenue.toFixed(2)} CAD</strong> across {paidBookings.length} paid session{paidBookings.length === 1 ? '' : 's'}.
         </p>
