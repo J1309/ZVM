@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Settings, MapPinned, ShieldCheck,
-  Truck, Receipt, ArrowLeft, Menu, X, LogOut, Calendar, Users, CalendarCheck,
+  Receipt, ArrowLeft, Menu, X, LogOut, Calendar, Users, CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import AdminDashboard from './admin/Dashboard';
@@ -11,7 +11,6 @@ import AdminUsersPanel from './admin/UsersPanel';
 import AdminCMSPanel from './admin/CMSPanel';
 import AdminFSAPanel from './admin/FSAPanel';
 import AdminVaccinePanel from './admin/VaccinePanel';
-import AdminFleetPanel from './admin/FleetPanel';
 import AdminReports from './admin/Reports';
 import AdminSchedulePanel from './admin/SchedulePanel';
 import AdminBookingsPanel from './admin/BookingsPanel';
@@ -23,7 +22,6 @@ const tabs = [
   { id: 'schedule', label: 'Pickup Windows', icon: Calendar, group: 'Operations', title: 'Pickup Windows', subtitle: '60-day calendar & daily operating sessions' },
   { id: 'fsa', label: 'FSA Manager', icon: MapPinned, group: 'Operations', title: 'FSA Manager', subtitle: 'Service zones and coverage' },
   { id: 'vaccines', label: 'Vaccines', icon: ShieldCheck, group: 'Operations', title: 'Vaccine Verification', subtitle: 'Review submitted records' },
-  { id: 'fleet', label: 'Fleet', icon: Truck, group: 'Operations', title: 'Fleet', subtitle: 'Vans and availability' },
   { id: 'cms', label: 'CMS', icon: Settings, group: 'Settings', title: 'Content Settings', subtitle: 'Site copy and pricing' },
   { id: 'reports', label: 'Reports', icon: Receipt, group: 'Settings', title: 'Reports', subtitle: 'Revenue and activity' },
 ];
@@ -52,7 +50,6 @@ export default function AdminPage() {
       case 'cms': return <AdminCMSPanel />;
       case 'fsa': return <AdminFSAPanel />;
       case 'vaccines': return <AdminVaccinePanel />;
-      case 'fleet': return <AdminFleetPanel />;
       case 'reports': return <AdminReports />;
       default: return <AdminDashboard />;
     }

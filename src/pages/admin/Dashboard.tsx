@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, DollarSign, Activity, MapPinned, Star, Rocket, Clock, CheckCircle2 } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
-import { getAllVans } from '../../lib/repositories/fleetRepository';
 import { getAllZones } from '../../lib/repositories/fsaRepository';
 import { getAllVaccines } from '../../lib/repositories/vaccineRepository';
-import { Booking, FleetVan, FSARecord, VaccineRecord } from '../../lib/types';
+import { Booking, FSARecord, VaccineRecord } from '../../lib/types';
 import { getFoundingMemberStats, setFoundingOfferClosed, FoundingMemberStats } from '../../lib/foundingMembers';
 import {
   getTimeUntilLaunch,
@@ -18,7 +17,6 @@ import {
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [vans, setVans] = useState<FleetVan[]>([]);
   const [zones, setZones] = useState<FSARecord[]>([]);
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
   const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
@@ -34,11 +32,10 @@ export default function AdminDashboard() {
 
     const loadAll = (initial = false) => {
       if (initial) setLoading(true);
-      Promise.all([getAllBookings(), getAllVans(), getAllZones(), getAllVaccines(), getFoundingMemberStats()])
-        .then(([b, v, z, vac, fStats]) => {
+      Promise.all([getAllBookings(), getAllZones(), getAllVaccines(), getFoundingMemberStats()])
+        .then(([b, z, vac, fStats]) => {
           if (!active) return;
           setBookings(b);
-          setVans(v);
           setZones(z);
           setVaccines(vac);
           setFoundingStats(fStats);
@@ -85,7 +82,6 @@ export default function AdminDashboard() {
   const totalRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
   const scheduledSessions = bookings.filter(b => b.status === 'scheduled').length;
   const completedSessions = bookings.filter(b => b.status === 'completed').length;
-  const activeVans = vans.filter(v => v.status === 'Active').length;
   const activeZones = zones.filter(z => z.status === 'active').length;
   const pendingVaccines = vaccines.filter(v => v.status === 'pending').length;
   const uniqueClients = new Set(paidBookings.map(b => b.customerName)).size;

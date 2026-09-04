@@ -1,30 +1,26 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Calendar, DollarSign, Download } from 'lucide-react';
+import { TrendingUp, Calendar, DollarSign, Download, Package } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
-import { getAllVans } from '../../lib/repositories/fleetRepository';
-import { Booking, FleetVan } from '../../lib/types';
+import { Booking } from '../../lib/types';
 
 export default function AdminReports() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [vans, setVans] = useState<FleetVan[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([getAllBookings(), getAllVans()]).then(([b, v]) => {
+    getAllBookings().then((b) => {
       if (!active) return;
       setBookings(b);
-      setVans(v);
       setLoading(false);
     });
 
     const interval = setInterval(() => {
-      Promise.all([getAllBookings(), getAllVans()]).then(([b, v]) => {
+      getAllBookings().then((b) => {
         if (!active) return;
         setBookings(b);
-        setVans(v);
       }).catch(() => {});
     }, 4000);
 
@@ -53,18 +49,25 @@ export default function AdminReports() {
   const gst = totalRevenue * 0.05;
   const hst = totalRevenue * 0.13;
 
-  const sessionsByVan = vans.map(van => ({
-    name: van.name,
-    sessions: paidBookings.filter(b => b.vanId === van.id).length,
-    revenue: paidBookings.filter(b => b.vanId === van.id).reduce((s, b) => s + b.sessionFee + (b.surcharge || 0), 0),
+  const plansMap = paidBookings.reduce<Record<string, { sessions: number; revenue: number }>>((acc, b) => {
+    const plan = b.planName || 'Single Run';
+    if (!acc[plan]) acc[plan] = { sessions: 0, revenue: 0 };
+    acc[plan].sessions += 1;
+    acc[plan].revenue += b.sessionFee + (b.surcharge || 0);
+    return acc;
+  }, {});
+
+  const sessionsByPlan = Object.entries(plansMap).map(([name, data]) => ({
+    name,
+    sessions: data.sessions,
+    revenue: data.revenue,
   }));
 
   const handleExport = () => {
     const rows = [
-      ['Booking ID', 'Van', 'FSA', 'Customer', 'Dog', 'Date', 'Time Slot', 'Plan', 'Fee', 'Surcharge', 'Total', 'Status'],
+      ['Booking ID', 'FSA', 'Customer', 'Dog', 'Date', 'Time Slot', 'Plan', 'Fee', 'Surcharge', 'Total', 'Status'],
       ...bookings.map(b => [
         b.id,
-        vans.find(v => v.id === b.vanId)?.name || b.vanId,
         b.fsa,
         b.customerName,
         b.dogName,
@@ -131,17 +134,21 @@ export default function AdminReports() {
         </div>
 
         <div className="p-5 bg-dark-700/50 rounded-xl border border-dark-600">
-          <p className="text-xs text-dark-400 mb-3 uppercase tracking-wider">Sessions by Van</p>
+          <p className="text-xs text-dark-400 mb-3 uppercase tracking-wider">Revenue by Package</p>
           <div className="space-y-2 text-sm">
-            {sessionsByVan.map(van => (
-              <div key={van.name} className="flex justify-between items-center">
-                <span className="text-dark-200">{van.name}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-dark-300 text-xs">{van.sessions} sessions</span>
-                  <span className="text-white font-mono text-xs">${van.revenue.toFixed(0)}</span>
+            {sessionsByPlan.length === 0 ? (
+              <p className="text-xs text-dark-400 italic">No package sessions yet.</p>
+            ) : (
+              sessionsByPlan.map(plan => (
+                <div key={plan.name} className="flex justify-between items-center">
+                  <span className="text-dark-200">{plan.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-dark-300 text-xs">{plan.sessions} sessions</span>
+                    <span className="text-white font-mono text-xs">${plan.revenue.toFixed(0)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
