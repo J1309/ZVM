@@ -168,14 +168,19 @@ export default function AdminUsersPanel() {
   const enriched = useMemo<Enriched[]>(() => {
     return users.map(user => {
       const userPayments = payments
-        .filter(p => p.userId === user.id)
+        .filter(p => p.userId === user.id || (p.customerEmail && user.email && p.customerEmail.trim().toLowerCase() === user.email.trim().toLowerCase()))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const paid = userPayments.filter(p => p.status === 'paid');
+      const isPaid = !!user.hasPaid || paid.length > 0;
+      const totalSpent = paid.length > 0
+        ? paid.reduce((sum, p) => sum + p.amountCents, 0)
+        : (user.hasPaid ? (user.paidPlanName?.toLowerCase().includes('trial') || user.paidPlanName?.toLowerCase().includes('founding') ? 7000 : 3500) : 0);
+
       return {
-        user,
+        user: { ...user, hasPaid: isPaid },
         payments: userPayments,
         currentPlan: paid[0] ?? null,
-        totalSpent: paid.reduce((sum, p) => sum + p.amountCents, 0),
+        totalSpent,
       };
     });
   }, [users, payments]);
@@ -207,15 +212,15 @@ export default function AdminUsersPanel() {
   }, [enriched, query, roleFilter, queueFilter]);
 
   const queueCounts = useMemo(() => {
-    const customers = users.filter(u => u.role !== 'admin');
+    const customers = enriched.filter(e => e.user.role !== 'admin');
     return {
       all: users.length,
-      needs_call: customers.filter(u => u.profileCompleted && !u.accountVerified).length,
-      scheduled_unpaid: customers.filter(u => u.accountVerified && !u.hasPaid).length,
-      paid: customers.filter(u => u.hasPaid).length,
-      incomplete: customers.filter(u => !u.profileCompleted).length,
+      needs_call: customers.filter(e => e.user.profileCompleted && !e.user.accountVerified).length,
+      scheduled_unpaid: customers.filter(e => e.user.accountVerified && !e.user.hasPaid).length,
+      paid: customers.filter(e => e.user.hasPaid).length,
+      incomplete: customers.filter(e => !e.user.profileCompleted).length,
     };
-  }, [users]);
+  }, [enriched, users]);
 
   // Helper to determine certificate status for a user
   const getCertStatus = (u: User) => {

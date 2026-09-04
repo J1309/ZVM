@@ -107,6 +107,7 @@ export interface Payment {
   amountCents: number;
   currency: string;
   customerEmail: string;
+  sessionsCount?: number;
   status: 'checkout_created' | 'paid' | 'cancelled' | 'failed' | 'refunded';
   createdAt: string;
 }

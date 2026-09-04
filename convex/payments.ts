@@ -229,6 +229,26 @@ export const markCheckoutSession = internalMutation({
       }
     }
 
+    // Automatically mark user account as paid
+    if (args.status === "paid") {
+      const now = Date.now();
+      let targetUser = payment.userId ? await ctx.db.get(payment.userId) : null;
+      if (!targetUser && payment.customerEmail) {
+        targetUser = await ctx.db
+          .query("users")
+          .withIndex("by_email", q => q.eq("email", payment.customerEmail.toLowerCase().trim()))
+          .unique();
+      }
+      if (targetUser) {
+        await ctx.db.patch(targetUser._id, {
+          hasPaid: true,
+          paidAt: now,
+          paidPlanName: payment.planName,
+          updatedAt: now,
+        });
+      }
+    }
+
     // Send Order & Booking Confirmation email on successful checkout
     if (args.status === "paid" && payment.customerEmail) {
       try {

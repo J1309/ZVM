@@ -4,7 +4,9 @@ import { TrendingUp, Users, DollarSign, Activity, MapPinned, Star, Rocket, Clock
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
 import { getAllZones } from '../../lib/repositories/fsaRepository';
 import { getAllVaccines } from '../../lib/repositories/vaccineRepository';
-import { Booking, FSARecord, VaccineRecord } from '../../lib/types';
+import { getAllPayments } from '../../lib/repositories/paymentRepository';
+import { getAllUsers } from '../../lib/repositories/userRepository';
+import { Booking, FSARecord, VaccineRecord, Payment, User } from '../../lib/types';
 import { getFoundingMemberStats, setFoundingOfferClosed, FoundingMemberStats } from '../../lib/foundingMembers';
 import {
   getTimeUntilLaunch,
@@ -19,6 +21,8 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [zones, setZones] = useState<FSARecord[]>([]);
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [foundingStats, setFoundingStats] = useState<FoundingMemberStats | null>(null);
   const [countdown, setCountdown] = useState<CountdownState>(() => getTimeUntilLaunch());
   const [isFullLaunch, setIsFullLaunch] = useState<boolean>(() => isFullLaunchActive());
@@ -32,13 +36,22 @@ export default function AdminDashboard() {
 
     const loadAll = (initial = false) => {
       if (initial) setLoading(true);
-      Promise.all([getAllBookings(), getAllZones(), getAllVaccines(), getFoundingMemberStats()])
-        .then(([b, z, vac, fStats]) => {
+      Promise.all([
+        getAllBookings(),
+        getAllZones(),
+        getAllVaccines(),
+        getFoundingMemberStats(),
+        getAllPayments(),
+        getAllUsers(),
+      ])
+        .then(([b, z, vac, fStats, p, u]) => {
           if (!active) return;
           setBookings(b);
           setZones(z);
           setVaccines(vac);
           setFoundingStats(fStats);
+          setPayments(p);
+          setUsers(u);
           if (initial) setLoading(false);
         })
         .catch(() => {
@@ -79,12 +92,36 @@ export default function AdminDashboard() {
   }
 
   const paidBookings = bookings.filter(b => b.status === 'scheduled' || b.status === 'completed');
-  const totalRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
+
+  // 1. Calculate confirmed revenue from payments table
+  const paidPayments = payments.filter(p => p.status === 'paid');
+  const paymentsTotal = paidPayments.reduce((sum, p) => sum + (p.amountCents / 100), 0);
+
+  // 2. Check any users marked hasPaid: true who might not yet have a record in payments table
+  const paidUsersWithoutPaymentRow = users.filter(u =>
+    u.hasPaid &&
+    !paidPayments.some(p => p.userId === u.id || (p.customerEmail && u.email && p.customerEmail.toLowerCase() === u.email.toLowerCase()))
+  );
+  const usersTotal = paidUsersWithoutPaymentRow.reduce((sum, u) => {
+    const isTrial = u.paidPlanName?.toLowerCase().includes('trial') || u.paidPlanName?.toLowerCase().includes('founding');
+    return sum + (isTrial ? 70 : 35);
+  }, 0);
+
+  // 3. True paid revenue combines both confirmed payments and paid member accounts
+  const totalRevenue = (paymentsTotal + usersTotal) > 0
+    ? (paymentsTotal + usersTotal)
+    : paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
+
   const scheduledSessions = bookings.filter(b => b.status === 'scheduled').length;
   const completedSessions = bookings.filter(b => b.status === 'completed').length;
   const activeZones = zones.filter(z => z.status === 'active').length;
   const pendingVaccines = vaccines.filter(v => v.status === 'pending').length;
-  const uniqueClients = new Set(paidBookings.map(b => b.customerName)).size;
+
+  const paidCustomerEmails = new Set<string>();
+  paidPayments.forEach(p => { if (p.customerEmail) paidCustomerEmails.add(p.customerEmail.toLowerCase()); });
+  users.filter(u => u.hasPaid).forEach(u => { if (u.email) paidCustomerEmails.add(u.email.toLowerCase()); });
+  paidBookings.forEach(b => { if (b.customerName) paidCustomerEmails.add(b.customerName.toLowerCase()); });
+  const uniqueClients = Math.max(paidCustomerEmails.size, paidPayments.length, paidBookings.length > 0 ? 1 : 0);
 
   const stats = [
     { label: 'Total Paid Revenue', value: `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`, icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
@@ -353,12 +390,76 @@ export default function AdminDashboard() {
         </motion.div>
       )}
 
+      {/* Recent Payments & Orders Section */}
+      <div className="p-5 bg-dark-700/50 rounded-xl border border-dark-600 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-dark-300 font-bold uppercase tracking-wider">
+              Confirmed Paid Transactions ({paidPayments.length + paidUsersWithoutPaymentRow.length})
+            </span>
+          </div>
+          <span className="text-emerald-400 font-extrabold text-sm">
+            Total: ${totalRevenue.toFixed(2)} CAD
+          </span>
+        </div>
+
+        {paidPayments.length === 0 && paidUsersWithoutPaymentRow.length === 0 ? (
+          <p className="text-xs text-dark-400 py-2">No paid transactions recorded yet.</p>
+        ) : (
+          <div className="divide-y divide-dark-600/60 overflow-hidden rounded-lg border border-dark-600 bg-dark-800/60">
+            {paidPayments.map((p) => (
+              <div key={p.id} className="p-3 flex items-center justify-between text-xs hover:bg-dark-700/30 transition-colors">
+                <div>
+                  <div className="font-semibold text-white flex items-center gap-2">
+                    <span>{p.planName || 'Slatmill Session'}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      PAID
+                    </span>
+                  </div>
+                  <p className="text-dark-400 text-[11px] mt-0.5">{p.customerEmail || 'Customer'}</p>
+                </div>
+                <div className="text-right">
+                  <span className="font-extrabold text-emerald-400 text-sm">
+                    ${(p.amountCents / 100).toFixed(2)} CAD
+                  </span>
+                  <p className="text-dark-400 text-[10px] mt-0.5">
+                    {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {paidUsersWithoutPaymentRow.map((u) => (
+              <div key={u.id} className="p-3 flex items-center justify-between text-xs hover:bg-dark-700/30 transition-colors">
+                <div>
+                  <div className="font-semibold text-white flex items-center gap-2">
+                    <span>{u.paidPlanName || 'Founding Member Trial Run'}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      PAID
+                    </span>
+                  </div>
+                  <p className="text-dark-400 text-[11px] mt-0.5">{u.email} ({u.name})</p>
+                </div>
+                <div className="text-right">
+                  <span className="font-extrabold text-emerald-400 text-sm">
+                    ${(u.paidPlanName?.toLowerCase().includes('trial') || u.paidPlanName?.toLowerCase().includes('founding') ? 70 : 35).toFixed(2)} CAD
+                  </span>
+                  <p className="text-dark-400 text-[10px] mt-0.5">
+                    {u.paidAt ? new Date(u.paidAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="p-5 bg-dark-700/50 rounded-xl border border-dark-600">
         <p className="text-xs text-dark-400 mb-2 uppercase tracking-wider">Operations &amp; Revenue Overview</p>
         <p className="text-dark-200 text-sm leading-relaxed">
           {activeZones} service zones active across Edmonton and Alberta.
           {pendingVaccines > 0 && ` ${pendingVaccines} vaccine records pending review.`}
-          {' '}Total paid bookings amount to <strong className="text-emerald-300">${totalRevenue.toFixed(2)} CAD</strong> across {paidBookings.length} paid session{paidBookings.length === 1 ? '' : 's'}.
+          {' '}Total paid revenue amounts to <strong className="text-emerald-300">${totalRevenue.toFixed(2)} CAD</strong> across {paidPayments.length + paidUsersWithoutPaymentRow.length} confirmed payment{paidPayments.length + paidUsersWithoutPaymentRow.length === 1 ? '' : 's'}.
         </p>
       </div>
     </div>

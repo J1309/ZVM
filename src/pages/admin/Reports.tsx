@@ -2,25 +2,33 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Calendar, DollarSign, Download } from 'lucide-react';
 import { getAllBookings } from '../../lib/repositories/bookingRepository';
-import { Booking } from '../../lib/types';
+import { getAllPayments } from '../../lib/repositories/paymentRepository';
+import { getAllUsers } from '../../lib/repositories/userRepository';
+import { Booking, Payment, User } from '../../lib/types';
 
 export default function AdminReports() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    getAllBookings().then((b) => {
+    Promise.all([getAllBookings(), getAllPayments(), getAllUsers()]).then(([b, p, u]) => {
       if (!active) return;
       setBookings(b);
+      setPayments(p);
+      setUsers(u);
       setLoading(false);
     });
 
     const interval = setInterval(() => {
-      getAllBookings().then((b) => {
+      Promise.all([getAllBookings(), getAllPayments(), getAllUsers()]).then(([b, p, u]) => {
         if (!active) return;
         setBookings(b);
+        setPayments(p);
+        setUsers(u);
       }).catch(() => {});
     }, 4000);
 
@@ -41,21 +49,53 @@ export default function AdminReports() {
     );
   }
 
+  const paidPayments = payments.filter(p => p.status === 'paid');
+  const paymentsTotal = paidPayments.reduce((sum, p) => sum + (p.amountCents / 100), 0);
+
+  const paidUsersWithoutPaymentRow = users.filter(u =>
+    u.hasPaid &&
+    !paidPayments.some(p => p.userId === u.id || (p.customerEmail && u.email && p.customerEmail.toLowerCase() === u.email.toLowerCase()))
+  );
+  const usersTotal = paidUsersWithoutPaymentRow.reduce((sum, u) => {
+    const isTrial = u.paidPlanName?.toLowerCase().includes('trial') || u.paidPlanName?.toLowerCase().includes('founding');
+    return sum + (isTrial ? 70 : 35);
+  }, 0);
+
   const paidBookings = bookings.filter(b => b.status === 'scheduled' || b.status === 'completed');
   const cancelled = bookings.filter(b => b.status === 'cancelled');
-  const totalRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
-  const baseRevenue = paidBookings.reduce((sum, b) => sum + b.sessionFee, 0);
+
+  const totalRevenue = (paymentsTotal + usersTotal) > 0
+    ? (paymentsTotal + usersTotal)
+    : paidBookings.reduce((sum, b) => sum + b.sessionFee + (b.surcharge || 0), 0);
+
+  const baseRevenue = totalRevenue / 1.05;
   const totalSurcharges = paidBookings.reduce((sum, b) => sum + (b.surcharge || 0), 0);
-  const gst = totalRevenue * 0.05;
+  const gst = totalRevenue - baseRevenue;
   const hst = totalRevenue * 0.13;
 
-  const plansMap = paidBookings.reduce<Record<string, { sessions: number; revenue: number }>>((acc, b) => {
-    const plan = b.planName || 'Single Run';
-    if (!acc[plan]) acc[plan] = { sessions: 0, revenue: 0 };
-    acc[plan].sessions += 1;
-    acc[plan].revenue += b.sessionFee + (b.surcharge || 0);
-    return acc;
-  }, {});
+  const plansMap: Record<string, { sessions: number; revenue: number }> = {};
+  if (paidPayments.length > 0 || paidUsersWithoutPaymentRow.length > 0) {
+    paidPayments.forEach(p => {
+      const plan = p.planName || 'Single Run';
+      if (!plansMap[plan]) plansMap[plan] = { sessions: 0, revenue: 0 };
+      plansMap[plan].sessions += p.sessionsCount || 1;
+      plansMap[plan].revenue += p.amountCents / 100;
+    });
+    paidUsersWithoutPaymentRow.forEach(u => {
+      const plan = u.paidPlanName || 'Founding Member Trial Run';
+      const isTrial = plan.toLowerCase().includes('trial') || plan.toLowerCase().includes('founding');
+      if (!plansMap[plan]) plansMap[plan] = { sessions: 0, revenue: 0 };
+      plansMap[plan].sessions += isTrial ? 3 : 1;
+      plansMap[plan].revenue += isTrial ? 70 : 35;
+    });
+  } else {
+    paidBookings.forEach(b => {
+      const plan = b.planName || 'Single Run';
+      if (!plansMap[plan]) plansMap[plan] = { sessions: 0, revenue: 0 };
+      plansMap[plan].sessions += 1;
+      plansMap[plan].revenue += b.sessionFee + (b.surcharge || 0);
+    });
+  }
 
   const sessionsByPlan = Object.entries(plansMap).map(([name, data]) => ({
     name,

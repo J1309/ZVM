@@ -503,27 +503,72 @@ export const recordPaymentSuccess = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const now = Date.now();
+    const isTrialOrFounding = args.planName.toLowerCase().includes("trial") || args.planName.toLowerCase().includes("founding");
+    const paymentAmountCents = isTrialOrFounding ? 7000 : 3500;
+    const paymentAmountDollars = paymentAmountCents / 100;
+
     await ctx.db.patch(user._id, {
       hasPaid: true,
       paidAt: now,
       paidPlanName: args.planName,
       updatedAt: now,
     });
-    if (user.assignedSessionDate && user.assignedTimeSlot) {
-      await ctx.db.insert("bookings", {
+
+    // Ensure payment is tracked in the payments table for admin reporting
+    const existingPayment = await ctx.db
+      .query("payments")
+      .withIndex("by_user", q => q.eq("userId", user._id))
+      .filter(q => q.eq(q.field("status"), "paid"))
+      .first();
+
+    if (!existingPayment) {
+      await ctx.db.insert("payments", {
         userId: user._id,
-        fsa: (user.address?.postalCode || "").slice(0, 3).toUpperCase(),
-        customerName: user.name,
-        dogName: user.dog?.name || "Dog",
-        date: user.assignedSessionDate,
-        timeSlot: user.assignedTimeSlot,
+        bookingIds: [],
+        sessions: user.assignedSessionDate && user.assignedTimeSlot ? [{ date: user.assignedSessionDate, timeSlot: user.assignedTimeSlot }] : [],
+        stripeCheckoutSessionId: `cs_dashboard_${now}_${user._id.slice(-6)}`,
+        planKey: isTrialOrFounding ? "trial_run" : "single_run",
         planName: args.planName,
-        sessionFee: 35,
-        surcharge: 0,
-        status: "scheduled",
+        amountCents: paymentAmountCents,
+        currency: "cad",
+        customerEmail: user.email,
+        isFoundingMember: isTrialOrFounding,
+        sessionsCount: isTrialOrFounding ? 3 : 1,
+        status: "paid",
         createdAt: now,
         updatedAt: now,
       });
+    }
+
+    if (user.assignedSessionDate && user.assignedTimeSlot) {
+      const existingBooking = await ctx.db
+        .query("bookings")
+        .withIndex("by_user", q => q.eq("userId", user._id))
+        .first();
+
+      if (existingBooking) {
+        await ctx.db.patch(existingBooking._id, {
+          sessionFee: paymentAmountDollars,
+          planName: args.planName,
+          status: "scheduled",
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("bookings", {
+          userId: user._id,
+          fsa: (user.address?.postalCode || "").slice(0, 3).toUpperCase(),
+          customerName: user.name,
+          dogName: user.dog?.name || "Dog",
+          date: user.assignedSessionDate,
+          timeSlot: user.assignedTimeSlot,
+          planName: args.planName,
+          sessionFee: paymentAmountDollars,
+          surcharge: 0,
+          status: "scheduled",
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     }
     await ctx.db.insert("auditEvents", {
       actorUserId: user._id,
