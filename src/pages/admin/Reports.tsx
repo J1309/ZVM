@@ -11,11 +11,27 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     Promise.all([getAllBookings(), getAllVans()]).then(([b, v]) => {
+      if (!active) return;
       setBookings(b);
       setVans(v);
       setLoading(false);
     });
+
+    const interval = setInterval(() => {
+      Promise.all([getAllBookings(), getAllVans()]).then(([b, v]) => {
+        if (!active) return;
+        setBookings(b);
+        setVans(v);
+      }).catch(() => {});
+    }, 4000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading) {

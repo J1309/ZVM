@@ -144,7 +144,25 @@ export default function AdminUsersPanel() {
   };
 
   useEffect(() => {
+    let active = true;
     reloadData();
+
+    // Live background polling so new signups, payments, and clearances sync in real-time
+    const interval = setInterval(() => {
+      Promise.all([getAllUsers(), getAllPayments(), getAllVaccines()])
+        .then(([u, p, v]) => {
+          if (!active) return;
+          setUsers(u);
+          setPayments(p);
+          setVaccinesList(v);
+        })
+        .catch(() => {});
+    }, 4000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const enriched = useMemo<Enriched[]>(() => {

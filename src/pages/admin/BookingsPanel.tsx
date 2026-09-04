@@ -54,7 +54,22 @@ export default function AdminBookingsPanel() {
   };
 
   useEffect(() => {
+    let active = true;
     fetchBookings();
+
+    const interval = setInterval(() => {
+      getAllBookings()
+        .then(data => {
+          if (!active) return;
+          setBookings(data);
+        })
+        .catch(() => {});
+    }, 4000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleSweepUnpaid = async () => {

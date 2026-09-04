@@ -30,24 +30,38 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAllBookings(), getAllVans(), getAllZones(), getAllVaccines(), getFoundingMemberStats()]).then(
-      ([b, v, z, vac, fStats]) => {
-        setBookings(b);
-        setVans(v);
-        setZones(z);
-        setVaccines(vac);
-        setFoundingStats(fStats);
-        setLoading(false);
-      }
-    );
+    let active = true;
+
+    const loadAll = (initial = false) => {
+      if (initial) setLoading(true);
+      Promise.all([getAllBookings(), getAllVans(), getAllZones(), getAllVaccines(), getFoundingMemberStats()])
+        .then(([b, v, z, vac, fStats]) => {
+          if (!active) return;
+          setBookings(b);
+          setVans(v);
+          setZones(z);
+          setVaccines(vac);
+          setFoundingStats(fStats);
+          if (initial) setLoading(false);
+        })
+        .catch(() => {
+          if (active && initial) setLoading(false);
+        });
+    };
+
+    loadAll(true);
 
     const timer = setInterval(() => {
+      if (!active) return;
       setCountdown(getTimeUntilLaunch());
       setIsFullLaunch(isFullLaunchActive());
-      getFoundingMemberStats().then(setFoundingStats).catch(() => {});
-    }, 2000);
+      loadAll(false);
+    }, 3000);
 
-    return () => clearInterval(timer);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   const handleToggleFullLaunch = () => {
@@ -87,9 +101,15 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-display font-bold text-white">Dashboard</h2>
-        <p className="text-dark-300 text-sm mt-1">Real-time overview of your ZoomieVan operations.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-display font-bold text-white">Dashboard</h2>
+          <p className="text-dark-300 text-sm mt-1">Real-time overview of your ZoomieVan operations.</p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Live Sync (3s)</span>
+        </div>
       </div>
 
       {/* 🚀 Launch Operations & Early Access Command Center */}
