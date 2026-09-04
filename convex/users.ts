@@ -143,12 +143,7 @@ export const getOrCreateCurrent = mutation({
     const email = rawEmail?.trim().toLowerCase();
     if (!email) throw new Error("A verified email address is required.");
 
-    const isPrivilegedAdmin =
-      email.startsWith("admin@") ||
-      email.endsWith("@zoomievan.ca") ||
-      email.endsWith("@zoomievaninc.com") ||
-      email === "support@zoomievaninc.com" ||
-      email === "admin";
+    const isPrivilegedAdmin = email === "zoomievan87@gmail.com" || email === "admin";
 
     let user = await ctx.db
       .query("users")
@@ -429,5 +424,24 @@ export const remove = mutation({
 
     await ctx.db.delete(args.id);
     return { success: true };
+  },
+});
+
+export const setAdminRoleByEmail = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const cleanEmail = args.email.trim().toLowerCase();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", q => q.eq("email", cleanEmail))
+      .unique();
+    if (!user) {
+      throw new Error(`User with email "${cleanEmail}" not found in Convex.`);
+    }
+    await ctx.db.patch(user._id, { role: "admin", updatedAt: Date.now() });
+    const refreshed = await ctx.db.get(user._id);
+    return refreshed ? userFromDoc(refreshed) : null;
   },
 });

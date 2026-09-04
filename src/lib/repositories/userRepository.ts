@@ -4,18 +4,12 @@ import { api, convex } from '../convexClient';
 
 const KEY = 'users';
 
+export const PRIMARY_ADMIN_EMAIL = 'zoomievan87@gmail.com';
+
 export function isPrivilegedAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   const clean = email.trim().toLowerCase();
-  return (
-    clean === 'admin' ||
-    clean === 'admin@zoomievan.ca' ||
-    clean === 'support@zoomievaninc.com' ||
-    clean.startsWith('admin@') ||
-    clean.includes('+admin@') ||
-    clean.endsWith('@zoomievan.ca') ||
-    clean.endsWith('@zoomievaninc.com')
-  );
+  return clean === PRIMARY_ADMIN_EMAIL || clean === 'admin';
 }
 
 export async function getAllUsers(): Promise<User[]> {

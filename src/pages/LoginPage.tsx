@@ -88,7 +88,7 @@ export default function LoginPage() {
     const result = await login(email, password);
     setLoading(false);
     if (result.success) {
-      const isAdmin = isPrivilegedAdminEmail(email);
+      const isAdmin = result.role === 'admin' || isPrivilegedAdminEmail(email);
       navigate(isAdmin ? '/admin' : '/dashboard');
     } else {
       setError(result.error ?? 'Login failed.');

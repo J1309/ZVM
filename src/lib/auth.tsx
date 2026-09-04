@@ -24,7 +24,7 @@ interface AuthContext {
   loading: boolean;
   authError?: string | null;
   retrySync?: () => void;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: 'admin' | 'customer' }>;
   signup: (data: SignupData) => Promise<{ success: boolean; error?: string }>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   acceptLegal: () => Promise<void>;
@@ -100,7 +100,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem(SESSION_KEY, found.id);
     sessionStorage.setItem(SESSION_TIME_KEY, Date.now().toString());
     setUser(found);
-    return { success: true };
+    return { success: true, role: found.role };
   }, []);
 
   const signup = useCallback(async (data: SignupData) => {
