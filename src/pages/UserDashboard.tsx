@@ -11,11 +11,10 @@ import {
 import { useAuth } from '../lib/auth';
 import { UserDog } from '../lib/types';
 import { isPrivilegedAdminEmail, recordPaymentSuccess } from '../lib/repositories/userRepository';
-import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey, SessionPick } from '../lib/payments';
+import { createCheckoutSession, cancelPendingCheckout, STRIPE_PLANS, StripePlanKey } from '../lib/payments';
 import { getFoundingMemberStats, FoundingMemberStats } from '../lib/foundingMembers';
 import { isFullLaunchActive, getTimeUntilLaunch, CountdownState, LAUNCH_TIME_LABEL_CANADIAN } from '../lib/launchConfig';
 import { convex, api } from '../lib/convexClient';
-import PickupWindowPicker from '../components/PickupWindowPicker';
 
 const CURRENT_LEGAL_VERSION = '2026-07-14';
 const emptyDog: UserDog = { name: '', breed: '', weight: 0, age: 0, energyLevel: '', reactivityNotes: '' };
@@ -60,8 +59,6 @@ export default function UserDashboard() {
 
   // Booking & Plan State
   const [selectedPlan, setSelectedPlan] = useState<StripePlanKey>('trial_run');
-  const [pickedSessions, setPickedSessions] = useState<SessionPick[]>([]);
-  const [sessionsConfirmed, setSessionsConfirmed] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<StripePlanKey | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
@@ -139,8 +136,6 @@ export default function UserDashboard() {
   useEffect(() => {
     if (checkoutStatus === 'cancelled') {
       cancelPendingCheckout().catch(() => {});
-      setPickedSessions([]);
-      setSessionsConfirmed(false);
       setCheckoutPlan(null);
     } else if (checkoutStatus === 'success' && user && !user.hasPaid) {
       recordPaymentSuccess('Founding Member Trial Run')
@@ -535,8 +530,6 @@ export default function UserDashboard() {
 
   const currentPlan = STRIPE_PLANS.find(p => p.key === selectedPlan)!;
   const foundingApplies = selectedPlan === 'trial_run' && !!foundingStats?.isOfferActive;
-  const bonusSessions = foundingApplies ? (foundingStats?.bonusSessions ?? 0) : 0;
-  const requiredCount = currentPlan.sessionsCount + bonusSessions;
 
   const changePlan = (key: StripePlanKey) => {
     if (!fullLaunchActive && key !== 'trial_run') {
@@ -544,13 +537,7 @@ export default function UserDashboard() {
       return;
     }
     setSelectedPlan(key);
-    setPickedSessions([]);
-    setSessionsConfirmed(false);
     setCheckoutError('');
-  };
-
-  const confirmSessions = () => {
-    if (pickedSessions.length === requiredCount) setSessionsConfirmed(true);
   };
 
   const startCheckout = async () => {
@@ -566,16 +553,9 @@ export default function UserDashboard() {
       setCheckoutError('All 50 Founding Member spots have been claimed. General booking unlocks on September 4th at 11:11 AM.');
       return;
     }
-    if (foundingApplies) {
-      if (!user.phone || user.phone.trim().length < 7) {
-        setCheckoutError('Please provide and save your phone number in Step 2 so our owner can call you to schedule your 3 sessions.');
-        return;
-      }
-    } else {
-      if (!sessionsConfirmed || pickedSessions.length !== requiredCount) {
-        setCheckoutError('Confirm your sessions before checkout.');
-        return;
-      }
+    if (!user.phone || user.phone.trim().length < 7) {
+      setCheckoutError('Please provide and save your contact phone number so our admin team can coordinate and allot your session date.');
+      return;
     }
     if (!user.legalAccepted || user.legalVersion !== CURRENT_LEGAL_VERSION) {
       setCheckoutError('Accept the current service terms before checkout.');
@@ -588,13 +568,12 @@ export default function UserDashboard() {
         // Local/demo fallback payment confirmation
         await recordPaymentSuccess(foundingApplies ? 'Founding Member Trial Run' : 'Standard Slatmill Package');
         await refreshUser();
-        setProfileSuccessMsg('🎉 Payment of $70 CAD confirmed! Your sessions are locked in.');
+        setProfileSuccessMsg('🎉 Payment of $70 CAD confirmed! Your session allotment is being coordinated by admin.');
         setTimeout(() => setProfileSuccessMsg(null), 6000);
         setCheckoutPlan(null);
         return;
       }
-      const sessionsToSend = foundingApplies ? [] : pickedSessions;
-      const session = await createCheckoutSession(selectedPlan, sessionsToSend);
+      const session = await createCheckoutSession(selectedPlan, []);
       window.location.assign(session.url);
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : 'Checkout could not be started.');
@@ -1770,7 +1749,7 @@ export default function UserDashboard() {
                               setCheckoutError('Regular packages unlock at official launch. Subscribe with Founding Member Early Access below!');
                               return;
                             }
-                            if (!sessionsConfirmed) changePlan(plan.key);
+                            changePlan(plan.key);
                           }}
                           className={`relative flex flex-col justify-between rounded-2xl p-4 transition-all border ${
                             isLocked
@@ -1788,7 +1767,7 @@ export default function UserDashboard() {
                                 name="stripe_plan_tab"
                                 value={plan.key}
                                 checked={isSelected}
-                                disabled={sessionsConfirmed || isLocked}
+                                disabled={isLocked}
                                 onChange={() => !isLocked && changePlan(plan.key)}
                                 className="h-4 w-4 accent-orange-600"
                               />
@@ -1822,16 +1801,41 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
-                {/* Step 2 — Pick & Confirm Sessions */}
+                {/* Step 2 — Session Scheduling Allotted by Admin */}
                 <div className="p-6 sm:p-7 bg-[#0C234E] rounded-3xl border border-white/10 shadow-xl space-y-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FF6B00] text-xs font-black text-white shadow-md">2</span>
                     <h3 className="font-display text-lg font-bold text-white">
-                      {foundingApplies ? 'VIP Personal Scheduling Concierge' : 'Pick & Confirm Your Sessions'}
+                      Session Date &amp; Window Allotment
                     </h3>
                   </div>
 
-                  {foundingApplies ? (
+                  {user.assignedSessionDate ? (
+                    <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 via-[#071A3D] to-[#071A3D] p-5 space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+                          <Calendar className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider">
+                              Allotted by Admin ✓
+                            </span>
+                            <span className="text-xs text-emerald-300 font-bold">Confirmed on Schedule</span>
+                          </div>
+                          <h4 className="font-display text-base font-bold text-white">
+                            Scheduled Date: {user.assignedSessionDate}
+                          </h4>
+                          <p className="text-xs text-white/70">
+                            Time Window: <strong className="text-white">{user.assignedTimeSlot || 'Standard Window (10:00 AM – 11:00 AM)'}</strong>
+                          </p>
+                          <p className="text-xs text-white/60 pt-1">
+                            Our team will arrive at your address (<span className="text-white font-semibold">{user.address?.line1 || 'your doorstep'}</span>). We will send an SMS update 15 minutes before arrival.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 via-[#071A3D] to-[#071A3D] p-5 space-y-4">
                       <div className="flex items-start gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF6B00] to-[#FFA726] text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/20">
@@ -1840,22 +1844,22 @@ export default function UserDashboard() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="px-2.5 py-0.5 rounded-full bg-[#FF6B00] text-white text-[10px] font-black uppercase tracking-wider">
-                              Founding Perk
+                              Admin Managed
                             </span>
-                            <span className="text-xs text-amber-300 font-bold">Personal Owner Concierge</span>
+                            <span className="text-xs text-amber-300 font-bold">Personal Route Coordination</span>
                           </div>
                           <h4 className="font-display text-base font-bold text-white">
-                            No calendar picking required!
+                            No manual calendar picking needed!
                           </h4>
-                          <p className="text-xs text-white/70 max-w-xl">
-                            The ZoomieVan owner will <strong>personally call you</strong> at your phone number to coordinate all <strong>3 of your private mobile slatmill sessions</strong>.
+                          <p className="text-xs text-white/70 max-w-xl leading-relaxed">
+                            To guarantee efficient doorstep routing and safety clearance, session dates are allotted directly by the ZoomieVan admin team. Once your profile and canine vitals are reviewed, our team will coordinate and allot your session slot.
                           </p>
                         </div>
                       </div>
 
                       <div className="rounded-xl bg-[#06142E]/80 border border-white/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-white/50 block">Owner Contact Phone</span>
+                          <span className="text-[10px] uppercase font-bold text-white/50 block">Contact Phone for Session Allotment</span>
                           <span className="text-base font-mono font-bold text-white">
                             {user.phone || '⚠️ No phone number saved yet'}
                           </span>
@@ -1867,38 +1871,6 @@ export default function UserDashboard() {
                         >
                           {user.phone ? 'Update Phone' : 'Enter Phone Number'}
                         </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={!isAccountVerified ? 'opacity-40 pointer-events-none' : ''}>
-                      {!sessionsConfirmed && (
-                        <PickupWindowPicker
-                          userFsa={user.address.postalCode?.slice(0, 3) || 'T5H'}
-                          requiredCount={requiredCount}
-                          picked={pickedSessions}
-                          onChange={setPickedSessions}
-                        />
-                      )}
-                      <div className="mt-4 p-4 rounded-xl bg-[#071A3D]/70 border border-white/10">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-bold text-white">
-                            {sessionsConfirmed ? 'Confirmed sessions' : `${pickedSessions.length} of ${requiredCount} selected`}
-                          </p>
-                          {sessionsConfirmed && (
-                            <button onClick={() => setSessionsConfirmed(false)} className="text-xs font-bold text-brand-400 hover:underline">
-                              Edit dates
-                            </button>
-                          )}
-                        </div>
-                        {!sessionsConfirmed && (
-                          <button
-                            onClick={confirmSessions}
-                            disabled={pickedSessions.length !== requiredCount}
-                            className="w-full mt-2 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-orange-600 text-white font-bold text-xs disabled:opacity-40 transition"
-                          >
-                            Confirm Sessions
-                          </button>
-                        )}
                       </div>
                     </div>
                   )}
@@ -1953,9 +1925,8 @@ export default function UserDashboard() {
                       checkoutPlan !== null ||
                       !hasLegal ||
                       !hasDogVitals ||
-                      (!foundingApplies && !sessionsConfirmed) ||
                       (!fullLaunchActive && (foundingStats?.remainingCount ?? 1) <= 0) ||
-                      (foundingApplies && (!user.phone || user.phone.trim().length < 7))
+                      (!user.phone || user.phone.trim().length < 7)
                     }
                     className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF6B00] via-[#FF7A1A] to-[#FFA726] hover:scale-[1.01] active:scale-[0.99] text-white font-bold text-sm shadow-xl shadow-orange-500/25 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >

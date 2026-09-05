@@ -419,7 +419,7 @@ export default function AdminUsersPanel() {
       }
 
       setSchedulingUser(null);
-      setVerifyToast(`Session scheduled on ${scheduledDate} (${scheduledTimeSlot}) for ${updatedUser.name}! Account verified & payment unlocked.`);
+      setVerifyToast(`Session allotted on ${scheduledDate} (${scheduledTimeSlot}) for ${updatedUser.name}! Account verified & payment unlocked.`);
       setTimeout(() => setVerifyToast(null), 5000);
     } catch (err) {
       console.error('Failed to schedule & verify:', err);
@@ -829,23 +829,23 @@ export default function AdminUsersPanel() {
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
-                          title="Review Canine Profile, Call Customer & Grant Verification"
+                          title="Review Canine Profile, Call Customer & Allot Session Date"
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-md transition animate-pulse"
                         >
                           <PhoneCall className="w-3.5 h-3.5" />
-                          <span className="hidden xs:inline sm:inline">Review &amp; Schedule</span>
+                          <span className="hidden xs:inline sm:inline">Review &amp; Allot Date</span>
                         </button>
-                      ) : user.accountVerified ? (
+                      ) : (
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }}
-                          title={user.assignedSessionDate ? 'Edit Scheduled Session Date & Slot' : 'Set Scheduled Session Date'}
+                          title={user.assignedSessionDate ? 'Edit Allotted Session Date & Slot' : 'Allot Session Date'}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-dark-200 bg-dark-700/90 hover:bg-dark-600 hover:text-white border border-dark-600 rounded-xl transition"
                         >
                           <Calendar className="w-3.5 h-3.5 text-brand-400" />
-                          <span>{user.assignedSessionDate ? 'Edit Date' : 'Schedule'}</span>
+                          <span>{user.assignedSessionDate ? 'Edit Date' : 'Allot Date'}</span>
                         </button>
-                      ) : null}
+                      )}
 
                       {/* View Profile Popup Button */}
                       <button
@@ -1481,7 +1481,7 @@ export default function AdminUsersPanel() {
                         className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20"
                       >
                         <PhoneCall className="w-3.5 h-3.5" />
-                        {viewingUser.user.assignedSessionDate ? 'Edit Schedule & Clearance' : 'Schedule Session & Clear'}
+                        {viewingUser.user.assignedSessionDate ? 'Edit Allotted Date & Clearance' : 'Allot Session Date & Clear'}
                       </button>
 
                       {viewingUser.user.accountVerified ? (
@@ -1823,7 +1823,7 @@ export default function AdminUsersPanel() {
                 </div>
                 <div>
                   <h3 className="font-display font-bold text-lg text-white flex items-center gap-2">
-                    Review Profile &amp; Schedule Session
+                    Review Profile &amp; Allot Session Date
                   </h3>
                   <p className="text-xs text-dark-300">
                     Client: <span className="text-white font-bold">{schedulingUser.name}</span> · Dog: <span className="text-brand-300 font-bold">{schedulingUser.dog?.name || 'Athlete'}</span>
@@ -1843,7 +1843,7 @@ export default function AdminUsersPanel() {
               <div className="p-3.5 rounded-2xl bg-brand-500/10 border border-brand-500/25 flex items-start gap-3">
                 <Sparkles className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-dark-200 leading-relaxed">
-                  <span className="font-bold text-white">Flow Step:</span> Call the customer to agree upon their preferred session date. Once confirmed, specify the date and grant verification. This immediately unlocks the <span className="text-brand-300 font-bold">Founding Member ($70 CAD)</span> payment for their account.
+                  <span className="font-bold text-white">Admin Flow:</span> Coordinate with the customer to agree upon their session date based on van route timing. Once confirmed, specify the allotted date &amp; slot and grant clearance.
                 </div>
               </div>
 

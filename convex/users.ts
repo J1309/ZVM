@@ -377,6 +377,39 @@ export const verifyAccount = mutation({
       updatedAt: now,
     });
     const targetUser = await ctx.db.get(args.userId);
+
+    // If an admin has allotted a session date & time slot, automatically reflect it in the bookings table
+    if (args.assignedSessionDate && args.assignedTimeSlot && targetUser) {
+      const existingBooking = await ctx.db
+        .query("bookings")
+        .withIndex("by_user", q => q.eq("userId", args.userId))
+        .first();
+
+      if (existingBooking) {
+        await ctx.db.patch(existingBooking._id, {
+          date: args.assignedSessionDate,
+          timeSlot: args.assignedTimeSlot,
+          status: "scheduled",
+          updatedAt: now,
+        });
+      } else if (targetUser.hasPaid) {
+        await ctx.db.insert("bookings", {
+          userId: args.userId,
+          fsa: (targetUser.address?.postalCode || "").slice(0, 3).toUpperCase(),
+          customerName: targetUser.name,
+          dogName: targetUser.dog?.name || "Dog",
+          date: args.assignedSessionDate,
+          timeSlot: args.assignedTimeSlot,
+          planName: targetUser.paidPlanName || "Slatmill Package",
+          sessionFee: 70,
+          surcharge: 0,
+          status: "scheduled",
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
     await ctx.db.insert("auditEvents", {
       actorUserId: admin._id,
       action: args.verified ? "account.verified" : "account.unverified",

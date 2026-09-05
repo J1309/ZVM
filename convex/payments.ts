@@ -320,10 +320,8 @@ export const createCheckoutSession = action({
     const isFoundingClaim = args.planKey === FOUNDING_PLAN_KEY && founding.isOfferActive;
     const expectedSessions = plan.sessionsCount + (isFoundingClaim ? FOUNDING_BONUS_SESSIONS : 0);
 
-    // Founding members do not pick dates online; the owner personally calls them to arrange sessions.
-    if (!isFoundingClaim && args.sessions.length !== expectedSessions) {
-      throw new Error(`${plan.name} requires ${expectedSessions} session${expectedSessions === 1 ? "" : "s"}.`);
-    }
+    // All session dates and pickup windows are now allotted directly by the admin team based on van routing.
+    // Online customer date selection is disabled so routes can be coordinated efficiently.
 
     const user = await ctx.runQuery(internal.payments.getCheckoutUser, {
       authProviderUserId: identity.subject,
